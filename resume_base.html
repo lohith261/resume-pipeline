@@ -19,7 +19,8 @@
 
   .page {
     width: 210mm;
-    min-height: 297mm;
+    height: 297mm;
+    overflow: hidden;
     padding: 10mm 12mm 10mm 12mm;
     margin: 0 auto;
   }
@@ -67,7 +68,7 @@
   }
 
   /* ── SECTION ── */
-  .section { margin-bottom: 18px; }
+  .section { margin-bottom: 15px; }
   .section.skills-section { page-break-before: always; break-before: page; }
   .page-break { page-break-before: always; break-before: page; height: 0; }
   .section-title {
@@ -87,7 +88,7 @@
   }
 
   /* ── EXPERIENCE / PROJECT BLOCKS ── */
-  .job, .project-block { margin-bottom: 13px; page-break-inside: avoid; }
+  .job, .project-block { margin-bottom: 10px; page-break-inside: avoid; }
   .job-header {
     display: flex;
     justify-content: space-between;
