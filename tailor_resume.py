@@ -196,10 +196,11 @@ Missing keywords to weave in: {missing_str}
 
 Rules:
 - Edit existing bullet points to naturally incorporate missing keywords where they fit
-- If more than 10% of important keywords cannot fit in existing bullets, add 1-2 new bullets
+- If more than 10% of important keywords cannot fit in existing bullets, you may add 1-2 new bullets
+- CRITICAL: The first page is strictly space-constrained. If you add text, you MUST condense other parts or delete a less important bullet so the overall length does NOT increase.
 - NEVER fabricate experience or projects — only enhance what already exists
 - Write in natural human English — no buzzword soup, no robotic lists
-- Keep every sentence concise (1-2 lines max per bullet)
+- Keep every sentence concise (max 1.5 lines per bullet ideally)
 - Do NOT change the HTML structure, CSS, or any section headings
 - Return the COMPLETE modified HTML — nothing else
 
