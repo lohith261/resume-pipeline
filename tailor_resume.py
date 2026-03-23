@@ -87,8 +87,10 @@ def read_base_html() -> str:
 
 
 def write_tailored_html(company: str, role: str, html: str) -> Path:
+    out_dir = OUTPUT_DIR / slugify(company)
+    out_dir.mkdir(parents=True, exist_ok=True)
     filename = f"resume_{slugify(company)}_{slugify(role)}.html"
-    out_path  = OUTPUT_DIR / filename
+    out_path  = out_dir / filename
     out_path.write_text(html, encoding="utf-8")
     print(f"[tailor] HTML written → {out_path}")
     return out_path
@@ -276,7 +278,8 @@ def main():
     print("="*60 + "\n")
 
     # ── 7. Save report JSON
-    report_path = OUTPUT_DIR / f"report_{slugify(company)}_{slugify(role)}.json"
+    report_path = OUTPUT_DIR / slugify(company) / f"report_{slugify(company)}_{slugify(role)}.json"
+    report_path.parent.mkdir(parents=True, exist_ok=True)
     report_path.write_text(json.dumps({
         "company": company, "role": role,
         "company_research": company_research,
@@ -290,7 +293,8 @@ def main():
     generate_pdf(out_html)
 
     slug    = f"{slugify(company)}_{slugify(role)}"
-    preview = f"http://localhost:3000/preview/tailored/resume_{slug}"
+    comp_slug = slugify(company)
+    preview = f"http://localhost:3000/preview/tailored/{comp_slug}/resume_{slug}"
     print(f"\n✅ Done!")
     print(f"   Preview : {preview}")
     print(f"   Coverage: {report_after['pct_covered']}%\n")

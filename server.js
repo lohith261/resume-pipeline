@@ -48,9 +48,22 @@ function injectLiveReload(html) {
 // Home — list all available resumes
 app.get('/', (req, res) => {
   const tailoredDir = path.join(BASE, 'tailored');
-  const tailored = fs.existsSync(tailoredDir)
-    ? fs.readdirSync(tailoredDir).filter(f => f.endsWith('.html'))
-    : [];
+  const tailored = [];
+
+  if (fs.existsSync(tailoredDir)) {
+    const entries = fs.readdirSync(tailoredDir, { withFileTypes: true });
+    for (const entry of entries) {
+      if (entry.isDirectory()) {
+        const compDir = path.join(tailoredDir, entry.name);
+        const files = fs.readdirSync(compDir).filter(f => f.endsWith('.html'));
+        for (const f of files) {
+          tailored.push(`${entry.name}/${f}`);
+        }
+      } else if (entry.isFile() && entry.name.endsWith('.html')) {
+        tailored.push(entry.name);
+      }
+    }
+  }
 
   const links = [
     `<li><a href="/preview/base">📄 resume_base</a></li>`,
@@ -93,14 +106,28 @@ app.get('/preview/base', (req, res) => {
   res.send(injectLiveReload(fs.readFileSync(file, 'utf8')));
 });
 
-// Preview tailored resume
+// Preview tailored resume (nested company format)
+app.get('/preview/tailored/:company/:name', (req, res) => {
+  const file = path.join(BASE, 'tailored', req.params.company, req.params.name + '.html');
+  if (!fs.existsSync(file)) return res.status(404).send('Not found');
+  res.send(injectLiveReload(fs.readFileSync(file, 'utf8')));
+});
+
+// Preview tailored resume (fallback for files strictly in tailored/)
 app.get('/preview/tailored/:name', (req, res) => {
   const file = path.join(BASE, 'tailored', req.params.name + '.html');
   if (!fs.existsSync(file)) return res.status(404).send('Not found');
   res.send(injectLiveReload(fs.readFileSync(file, 'utf8')));
 });
 
-// Download PDF
+// Download PDF (nested company format)
+app.get('/download/:company/:file', (req, res) => {
+  const file = path.join(BASE, 'tailored', req.params.company, req.params.file);
+  if (!fs.existsSync(file)) return res.status(404).send('PDF not found');
+  res.download(file);
+});
+
+// Download PDF (fallback)
 app.get('/download/:file', (req, res) => {
   const p1 = path.join(BASE, 'tailored', req.params.file);
   const p2 = path.join(BASE, req.params.file);
@@ -135,10 +162,12 @@ app.post('/tailor', async (req, res) => {
     const coverageMatch = stdout.match(/Coverage:\s*([\d.]+)%/);
     const coverage = coverageMatch ? parseFloat(coverageMatch[1]) : null;
 
-    const slug = company.toLowerCase().replace(/\s+/g, '_') + '_' +
+    const slug = company.toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_|_$/g, '') + '_' +
                  role.toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_|_$/g, '');
-    const pdfUrl  = `/download/resume_${slug}.pdf`;
-    const htmlUrl = `/preview/tailored/resume_${slug}`;
+    const compSlug = company.toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_|_$/g, '');
+    
+    const pdfUrl  = `/download/${compSlug}/resume_${slug}.pdf`;
+    const htmlUrl = `/preview/tailored/${compSlug}/resume_${slug}`;
 
     broadcast(); // auto-reload any open preview tabs
 
