@@ -1,0 +1,21 @@
+{
+  "dependencies": {
+    "chokidar": "^5.0.0",
+    "dotenv": "^17.3.1",
+    "express": "^5.2.1",
+    "puppeteer": "^24.40.0"
+  },
+  "name": "resume-pipeline",
+  "version": "1.0.0",
+  "description": "AI-powered resume tailoring pipeline",
+  "main": "apply_accenture.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "node server.js",
+    "preview": "node server.js"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs"
+}

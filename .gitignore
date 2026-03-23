@@ -1,0 +1,25 @@
+# Secrets — never commit
+.env
+
+# Node
+node_modules/
+npm-debug.log*
+
+# Generated output — keep HTMLs, ignore binaries and temp files
+tailored/*.pdf
+tailored/*.png
+tailored/*.json
+*.pdf
+*.png
+apply_*.js
+apply_*.py
+auto_apply.py
+
+# Mac
+.DS_Store
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+.Python
