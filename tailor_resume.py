@@ -33,8 +33,8 @@ def load_env():
 load_env()
 
 GROK_API_KEY = os.environ.get("GROK_API_KEY", "")
-GROK_URL     = "https://api.x.ai/v1/chat/completions"
-GROK_MODEL   = "grok-3-mini"   # fast + cheap for tailoring tasks
+GROK_URL     = "https://api.groq.com/openai/v1/chat/completions"
+GROK_MODEL   = "llama-3.3-70b-versatile"   # fast + cheap for tailoring tasks
 
 BASE_DIR   = Path(__file__).parent
 BASE_HTML  = BASE_DIR / "resume_base.html"
@@ -62,16 +62,22 @@ def grok(system: str, user: str, max_tokens: int = 2000) -> str:
         data    = payload,
         headers = {
             "Content-Type":  "application/json",
-            "Authorization": f"Bearer {GROK_API_KEY}"
+            "Authorization": f"Bearer {GROK_API_KEY}",
+            "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
         },
         method = "POST"
     )
     try:
-        with urlopen(req, timeout=60) as r:
+        import ssl
+        ctx = ssl.create_default_context()
+        ctx.check_hostname = False
+        ctx.verify_mode = ssl.CERT_NONE
+        with urlopen(req, timeout=60, context=ctx) as r:
             data = json.loads(r.read())
             return data["choices"][0]["message"]["content"].strip()
     except URLError as e:
-        raise RuntimeError(f"Grok API error: {e}")
+        err_msg = e.read().decode('utf-8') if hasattr(e, 'read') else str(e)
+        raise RuntimeError(f"Grok API error: {e}\nDetails: {err_msg}")
 
 
 # ── helpers ──────────────────────────────────────────────────────────────────
