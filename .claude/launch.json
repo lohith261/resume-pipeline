@@ -1,0 +1,12 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "resume-pipeline",
+      "cwd": "/Users/bandreddysrisailohith/Desktop/My Future",
+      "runtimeExecutable": "/opt/homebrew/bin/node",
+      "runtimeArgs": ["server.js"],
+      "port": 3001
+    }
+  ]
+}
