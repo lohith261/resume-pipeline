@@ -1,17 +1,29 @@
 # Resume Pipeline
 
-An AI-powered resume tailoring system built for **Bandreddy Sri Sai Lohith**. Given a job description, it automatically researches the company, extracts ATS keywords, rewrites resume bullets to hit ≥ 90% keyword coverage, and exports a pixel-perfect 2-page PDF — all powered by the **Grok API (xAI)**.
+An AI-powered resume tailoring system built for **Bandreddy Sri Sai Lohith**. Paste a job description, and the pipeline automatically extracts ATS keywords, researches the company, rewrites resume bullets to hit ≥ 90% keyword coverage, and exports a pixel-perfect 2-page PDF.
+
+**Primary AI:** Groq API (`llama-3.3-70b-versatile`) — fast and free tier
+**Fallback AI:** OpenRouter (`google/gemini-2.5-flash`) — auto-switches on Groq rate-limit
+**PDF Engine:** Puppeteer (headless Chromium)
+**Preview Server:** Express.js with SSE live-reload
 
 ---
 
-## What It Does
+## How It Works
 
 ```
-You paste a JD  →  Grok extracts keywords  →  Grok researches company
-                →  Coverage scored against base resume
-                →  Grok rewrites bullets naturally (no buzzword soup)
-                →  Tailored HTML written  →  Puppeteer exports 2-page PDF
-                →  Live preview auto-reloads at localhost:3001
+JD text input
+    │
+    ├─► [Groq] Extract ATS keywords from JD
+    ├─► [Groq] Research company + role context
+    ├─► Score keyword coverage against resume_base.html
+    │
+    ├─ Coverage < 90%? ──► [Groq] Rewrite bullets, weave in missing keywords
+    │                           (edit first, add only if >10% still missing)
+    │
+    ├─► Write → tailored/<company>/resume_<company>_<role>.html
+    ├─► Puppeteer → tailored/<company>/resume_<company>_<role>.pdf
+    └─► SSE broadcast → auto-reload browser preview
 ```
 
 ---
@@ -21,29 +33,41 @@ You paste a JD  →  Grok extracts keywords  →  Grok researches company
 ```
 resume-pipeline/
 │
-├── resume_base.html          # Master resume — ATS-clean 2-page HTML/CSS
-│                             # Edited here first; all tailored versions branch from this
+├── resume_base.html              # Master resume — the single source of truth
+│                                 # ATS-clean, 2-page, pure HTML/CSS, no tables/columns
+│                                 # All tailored resumes are generated from this file
 │
-├── tailor_resume.py          # Core pipeline — Grok API orchestration
-│                             # Steps: keyword extract → company research → bullet rewrite → coverage score
+├── tailor_resume.py              # Core AI pipeline (356 lines)
+│                                 # Calls Groq API → keyword extract → company research
+│                                 # → coverage score → bullet rewrite → HTML + PDF output
+│                                 # Auto-falls back to OpenRouter if Groq hits rate limit
 │
-├── generate_pdf.js           # Puppeteer script — converts HTML → A4 PDF (exact 2 pages, no overflow)
+├── generate_pdf.js               # Puppeteer HTML→PDF converter
+│                                 # Renders at A4, zero margins, waits for fonts
+│                                 # Usage: node generate_pdf.js <input.html> <output.pdf>
 │
-├── server.js                 # Express preview server (port 3001)
-│                             # • Serves resume HTML with SSE live-reload
-│                             # • POST /tailor — triggers full pipeline via API
-│                             # • GET  /preview/base
-│                             # • GET  /preview/tailored/:name
-│                             # • GET  /download/:filename
+├── server.js                     # Express preview server (port 3001)
+│                                 # GET  /                              → home, lists all resumes
+│                                 # GET  /preview/base                 → live base resume
+│                                 # GET  /preview/tailored/<co>/<name> → live tailored resume
+│                                 # GET  /download/<co>/<file>.pdf     → download PDF
+│                                 # POST /tailor                       → trigger full pipeline
+│                                 # GET  /livereload                   → SSE stream for auto-reload
+│
+├── tailored/                     # All outputs — nested by company slug
+│   ├── accenture/
+│   │   ├── resume_accenture_genai_full_stack_engineer.html
+│   │   ├── resume_accenture_genai_full_stack_engineer.pdf   ← gitignored
+│   │   └── report_accenture_genai_full_stack_engineer.json  ← gitignored
+│   ├── clera/
+│   ├── scale_ai/
+│   └── ... (22+ companies)
 │
 ├── .claude/
-│   └── launch.json           # Claude Code dev server config — run `preview_start resume-pipeline`
+│   └── launch.json               # Claude Code dev server config
 │
-├── tailored/                 # Auto-generated output folder (git-tracked HTMLs, PDFs gitignored)
-│   ├── resume_<company>_<role>.html
-│   └── resume_<company>_<role>.pdf
-│
-├── .env                      # Local secrets — NEVER committed (see .env.example)
+├── .env                          # Local secrets — NEVER committed
+├── .env.example                  # Template — safe to commit
 ├── .gitignore
 ├── package.json
 └── README.md
@@ -51,38 +75,17 @@ resume-pipeline/
 
 ---
 
-## Tech Stack
-
-| Layer | Tool |
-|---|---|
-| AI / LLM | Grok API (`grok-3-mini`) via xAI — keyword extraction, company research, bullet rewriting |
-| PDF Generation | Puppeteer (headless Chromium) — renders HTML → A4 PDF |
-| Preview Server | Express.js + chokidar — SSE live-reload on file change |
-| Resume Format | Pure HTML + CSS (Inter font, inline SVG icons for email/phone/LinkedIn/GitHub) |
-| Runtime | Node.js v25+ (via Homebrew) + Python 3 |
-| Version Control | Git + GitHub (`lohith261/resume-pipeline`) |
-
----
-
-## Resume Design Decisions
-
-- **2-page enforced** — page 1: Header, Summary, Experience, Projects. Page 2: Skills, Education, Awards. Split using two separate `<div class="page">` containers with `break-before: page` — the only reliable way to force page breaks in Puppeteer's Chromium renderer.
-- **No `page-break-inside: avoid` on sections** — only on individual `.project-block` and `.job` elements. Applying it to whole sections causes Chromium to push entire sections to the next page, breaking the layout.
-- **Spacing tuned to fill page 1** — `section margin-bottom: 18px`, `project-block margin-bottom: 13px`, `li margin-bottom: 5px`, `line-height: 1.44`. Values were measured with Puppeteer JS evaluation to leave ≤ 30px gap at page bottom.
-- **ATS-friendly** — no tables, no columns, no images (except SVG contact icons), no text boxes. Plain semantic HTML for maximum parser compatibility.
-
----
-
 ## Environment Variables
 
-Create a `.env` file in the project root:
+Create `.env` in the project root (copy from `.env.example`):
 
 ```env
-GROK_API_KEY=your_grok_api_key_here   # From console.x.ai
-PORT=3001                              # Preview server port
+GROK_API_KEY=your_groq_api_key          # From console.groq.com (free tier available)
+OPENROUTER_API_KEY=your_openrouter_key  # From openrouter.ai (fallback — optional)
+PORT=3001                               # Preview server port
 ```
 
-> `.env` is gitignored. Never commit secrets.
+> `.env` is gitignored. The pipeline works with just `GROK_API_KEY`. `OPENROUTER_API_KEY` is only used as fallback when Groq hits its rate limit.
 
 ---
 
@@ -90,11 +93,15 @@ PORT=3001                              # Preview server port
 
 ### Prerequisites
 
-- **Node.js v18+** — install via Homebrew: `brew install node`
-- **Python 3.9+** — comes with macOS or install via `brew install python`
-- **Git** — `brew install git`
+```bash
+# Install Homebrew (if not already installed)
+/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
 
-### 1. Clone the repo
+# Install Node.js and Python
+brew install node python
+```
+
+### 1. Clone
 
 ```bash
 git clone https://github.com/lohith261/resume-pipeline.git
@@ -107,13 +114,13 @@ cd resume-pipeline
 npm install
 ```
 
-> This installs `express`, `chokidar`, `dotenv`, and `puppeteer` (which downloads Chromium automatically).
+> Installs `express`, `chokidar`, `dotenv`, and `puppeteer` (downloads Chromium automatically ~150MB).
 
 ### 3. Set up environment variables
 
 ```bash
 cp .env.example .env
-# Then edit .env and add your GROK_API_KEY
+# Edit .env — add your GROK_API_KEY at minimum
 ```
 
 ### 4. Start the preview server
@@ -122,33 +129,32 @@ cp .env.example .env
 node server.js
 ```
 
-Server starts at **http://localhost:3001**
+Open **http://localhost:3001** — you'll see all available resumes listed.
 
-| URL | Description |
+| URL | What it does |
 |---|---|
-| `http://localhost:3001` | Homepage — lists all available resumes |
-| `http://localhost:3001/preview/base` | Live preview of base resume |
-| `http://localhost:3001/preview/tailored/<name>` | Live preview of a tailored resume |
-| `http://localhost:3001/download/<file>.pdf` | Download a PDF |
-
-> The server **auto-reloads** any open browser tab when an `.html` file changes — no manual refresh needed.
+| `http://localhost:3001` | Home — lists all resumes |
+| `http://localhost:3001/preview/base` | Live base resume (auto-reloads on save) |
+| `http://localhost:3001/preview/tailored/accenture/resume_accenture_genai_full_stack_engineer` | Tailored resume preview |
 
 ---
 
 ## Tailoring a Resume
 
-### Option A — via Python (CLI)
+### Option A — CLI
 
 ```bash
-python3 tailor_resume.py "<paste full JD here>" "Company Name" "Role Title"
+python3 tailor_resume.py "<full JD text>" "Company Name" "Role Title"
 ```
 
 Example:
+
 ```bash
-python3 tailor_resume.py "We are looking for a GenAI Full-Stack Engineer..." "Accenture" "GenAI Full-Stack Engineer"
+python3 tailor_resume.py "We are looking for a GenAI Full-Stack Engineer to build agentic applications..." "Accenture" "GenAI Full-Stack Engineer"
 ```
 
 Output:
+
 ```
 [grok] Extracting keywords from JD...
 [grok] Extracted 42 keywords
@@ -159,18 +165,17 @@ Output:
   KEYWORD COVERAGE REPORT
   Company  : Accenture
   Role     : GenAI Full-Stack Engineer
-  Before   : 43.9% (18/41)
-  After    : 91.2% (38/41)
+  Before   : 43.9%  (18/42)
+  After    : 91.2%  (38/42)
 ============================================================
 
-[tailor] HTML written → tailored/resume_accenture_genai_full_stack_engineer.html
-[tailor] PDF written  → tailored/resume_accenture_genai_full_stack_engineer.pdf
+[tailor] HTML written → tailored/accenture/resume_accenture_genai_full_stack_engineer.html
+[tailor] PDF written  → tailored/accenture/resume_accenture_genai_full_stack_engineer.pdf
 
-✅ Done!
-   Preview : http://localhost:3001/preview/tailored/resume_accenture_genai_full_stack_engineer
+✅ Done!  Preview: http://localhost:3001/preview/tailored/accenture/resume_accenture_genai_full_stack_engineer
 ```
 
-### Option B — via API (while server is running)
+### Option B — API (server must be running)
 
 ```bash
 curl -X POST http://localhost:3001/tailor \
@@ -183,97 +188,92 @@ curl -X POST http://localhost:3001/tailor \
 ```
 
 Response:
+
 ```json
 {
   "ok": true,
   "coverage": 91.2,
-  "pdfUrl": "/download/resume_accenture_genai_full_stack_engineer.pdf",
-  "htmlUrl": "/preview/tailored/resume_accenture_genai_full_stack_engineer"
+  "pdfUrl": "/download/accenture/resume_accenture_genai_full_stack_engineer.pdf",
+  "htmlUrl": "/preview/tailored/accenture/resume_accenture_genai_full_stack_engineer",
+  "log": "..."
 }
 ```
 
-> The API also **broadcasts a live-reload** to any open browser tabs automatically.
+> The API also triggers an SSE broadcast — any open browser preview tabs **auto-reload** instantly.
 
 ---
 
 ## Generating a PDF Manually
 
-To convert any resume HTML to PDF directly:
-
 ```bash
-node generate_pdf.js tailored/resume_accenture_genai_full_stack_engineer.html tailored/output.pdf
-```
+# Any HTML file → PDF
+node generate_pdf.js tailored/accenture/resume_accenture_genai_full_stack_engineer.html tailored/accenture/output.pdf
 
-Or for the base resume:
-
-```bash
+# Regenerate base resume PDF
 node generate_pdf.js resume_base.html resume_base.pdf
 ```
 
 ---
 
-## How the Grok Pipeline Works (tailor_resume.py)
+## AI Pipeline Details (`tailor_resume.py`)
 
-```
-Step 1 — Read base resume HTML
-Step 2 — Call Grok: extract structured keywords from JD
-          Model: grok-3-mini | Temp: 0.4 | Returns: JSON array of strings
-Step 3 — Score keyword coverage (regex match against base HTML)
-Step 4 — Call Grok: research company + role context (3–5 sentence brief)
-Step 5 — If coverage < 90%:
-            Call Grok: rewrite bullets weaving in missing keywords
-            Rules: edit existing bullets first, add new ones only if >10% still missing,
-                   human English only, no fabrication, no structure changes
-Step 6 — Re-score coverage after tailoring
-Step 7 — Write tailored HTML → tailored/resume_<company>_<role>.html
-Step 8 — Call generate_pdf.js via subprocess → PDF
-Step 9 — Save JSON report → tailored/report_<company>_<role>.json
-```
+| Step | What happens |
+|---|---|
+| 1 | Read `resume_base.html` |
+| 2 | **Groq**: Extract structured keyword list from JD (JSON array) |
+| 3 | Score keyword coverage — regex match against base HTML |
+| 4 | **Groq**: Research company + role (3–5 sentence brief) |
+| 5 | If coverage < 90%: **Groq** rewrites bullets, weaving in missing keywords |
+| 6 | Re-score coverage on tailored HTML |
+| 7 | Print before/after coverage report to stdout |
+| 8 | Save JSON report → `tailored/<company>/report_<co>_<role>.json` |
+| 9 | Write HTML → `tailored/<company>/resume_<co>_<role>.html` |
+| 10 | Spawn `node generate_pdf.js` subprocess → PDF |
+
+**Rate limit handling:** If Groq returns HTTP 429, the pipeline automatically retries the same call via OpenRouter (`gemini-2.5-flash`) with no user intervention needed.
 
 ---
 
 ## Tailoring Rules (for LLMs reading this)
 
-When editing bullets, follow these constraints strictly:
+When the AI edits resume bullets, it follows these strict constraints:
 
 1. **Edit existing bullets first** — weave keywords naturally into current sentences
-2. **Add new bullets only if** more than 10% of important keywords still can't fit
-3. **Never fabricate** — only enhance what already exists in the candidate's real experience
-4. **Human English** — no buzzword stacking, no robotic keyword lists
-5. **Max 2 lines per bullet** — keep concise
-6. **Do not touch** HTML structure, CSS, section headings, or contact info
-7. **Return complete HTML** — not a diff, not a snippet
+2. **Add new bullets only if** >10% of important keywords still can't fit anywhere
+3. **Space constraint is critical** — page 1 is strictly sized. If text is added, something else must be shortened so the layout stays within 2 pages
+4. **Never fabricate** — only enhance what already exists in the candidate's real experience
+5. **Human English only** — no buzzword stacking, no robotic keyword lists
+6. **Max ~1.5 lines per bullet** — keep concise
+7. **Do not touch** HTML structure, CSS, section headings, or contact info
+8. **Return complete HTML** — not a diff, not a snippet, no markdown fences
+
+---
+
+## Resume Layout Notes (important for PDF debugging)
+
+- **Two separate `<div class="page">` containers** — the only reliable way to force a clean page break in Puppeteer's Chromium renderer. CSS `page-break-before` on elements inside one container is unreliable.
+- **Page 1:** Header, Summary, Experience, Projects
+- **Page 2:** Skills, Education, Awards & Honors
+- **`page-break-inside: avoid` is set only on `.project-block` and `.job`**, NOT on `.section`. Setting it on entire sections causes Chromium to push the whole section to the next page when it doesn't fully fit, creating a 3rd page.
+- **Spacing is tuned precisely** — `section margin-bottom: 18px`, `project-block: 13px`, `li: 5px`, `line-height: 1.44`. These values leave ≤ 30px gap at the bottom of page 1 and prevent overflow into a 3rd page.
 
 ---
 
 ## Output Files
 
-All outputs go into `tailored/`:
-
-| File | Description |
+| File | Committed to git? |
 |---|---|
-| `resume_<co>_<role>.html` | Tailored resume HTML (committed to git) |
-| `resume_<co>_<role>.pdf` | Exported PDF (gitignored — binary) |
-| `report_<co>_<role>.json` | Coverage report: before/after scores, keyword lists, company research (gitignored) |
+| `tailored/<co>/resume_<co>_<role>.html` | ✅ Yes |
+| `tailored/<co>/resume_<co>_<role>.pdf` | ❌ No (binary, gitignored) |
+| `tailored/<co>/report_<co>_<role>.json` | ❌ No (contains full JD text) |
+| `resume_base.html` | ✅ Yes |
+| `resume_base.pdf` | ❌ No |
 
 ---
 
-## Updating the Base Resume
+## Companies Tailored So Far
 
-All tailored resumes are generated from `resume_base.html`. To update your base resume:
-
-1. Edit `resume_base.html` directly
-2. Preview at `http://localhost:3001/preview/base` (auto-reloads on save)
-3. Check page layout — page 1 should end within **30px of the bottom** of A4
-4. Commit the updated base: `git add resume_base.html && git commit -m "update base resume"`
-
----
-
-## Known Constraints
-
-- **Puppeteer PDF page breaks** — must use two separate `<div class="page">` wrappers. CSS `page-break-before` on elements inside a single wrapper is unreliable in Chromium headless.
-- **Grok token limit** — `tailor_resume.py` caps JD input at 4000 chars and keyword list at 40 items to stay within `grok-3-mini` context limits.
-- **Port 3001** — hardcoded in `.env`. If in use, change `PORT` in `.env` and update `.claude/launch.json`.
+Airweave, Algo1, Bjak, Build, Clera, Concentrate AI, Conductor, Duku AI, Faction, FutureSight, Guild.ai, Happy Robot, Interactivated, Minted, OneSeven Tech, Reflow, Sapiom, Scale AI, StackOne, TalentPluto, Titan AI, TSCAI + Accenture (22 total)
 
 ---
 
