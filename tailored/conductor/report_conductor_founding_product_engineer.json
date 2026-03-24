@@ -1,0 +1,83 @@
+{
+  "company": "Conductor",
+  "role": "Founding Product Engineer",
+  "company_research": "Conductor is a marketing technology company that focuses on SEO and content optimization, utilizing AI and machine learning to help businesses improve their online presence. The company values innovation, collaboration, and a customer-centric approach, seeking engineers who are passionate about solving complex problems and driving growth. To tailor your resume, highlight your experience with cloud-based technologies, AI/ML, and data-driven decision making, as well as your ability to work in a fast-paced, agile environment. Additionally, emphasize your understanding of SEO principles and content marketing strategies to demonstrate your relevance to Conductor's core business.",
+  "keywords": [
+    "LLMs",
+    "AI",
+    "TypeScript",
+    "Tauri",
+    "React",
+    "Software Engineering",
+    "Machine Learning",
+    "Startup",
+    "Product Development",
+    "User Interface",
+    "UX Design",
+    "Prototyping",
+    "Software Development",
+    "Technical Expertise",
+    "Cloud Computing",
+    "Mac",
+    "JavaScript",
+    "Frontend Development",
+    "Backend Development",
+    "Full Stack Development"
+  ],
+  "before": {
+    "covered": [
+      "LLMs",
+      "AI",
+      "TypeScript",
+      "React",
+      "JavaScript"
+    ],
+    "missing": [
+      "Tauri",
+      "Software Engineering",
+      "Machine Learning",
+      "Startup",
+      "Product Development",
+      "User Interface",
+      "UX Design",
+      "Prototyping",
+      "Software Development",
+      "Technical Expertise",
+      "Cloud Computing",
+      "Mac",
+      "Frontend Development",
+      "Backend Development",
+      "Full Stack Development"
+    ],
+    "pct_covered": 25.0,
+    "total": 20
+  },
+  "after": {
+    "covered": [
+      "LLMs",
+      "AI",
+      "TypeScript",
+      "Tauri",
+      "React",
+      "Software Engineering",
+      "Machine Learning",
+      "Product Development",
+      "User Interface",
+      "UX Design",
+      "Prototyping",
+      "Software Development",
+      "Technical Expertise",
+      "Cloud Computing",
+      "Mac",
+      "JavaScript",
+      "Frontend Development",
+      "Backend Development",
+      "Full Stack Development"
+    ],
+    "missing": [
+      "Startup"
+    ],
+    "pct_covered": 95.0,
+    "total": 20
+  }
+}
