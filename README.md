@@ -1,11 +1,13 @@
 # Resume Pipeline
 
-An AI-powered resume tailoring system built for **Bandreddy Sri Sai Lohith**. Paste a job description, and the pipeline automatically extracts ATS keywords, researches the company, rewrites resume bullets to hit ≥ 90% keyword coverage, and exports a pixel-perfect 2-page PDF.
+An AI-powered resume tailoring system built for **Bandreddy Sri Sai Lohith**. Paste a job description or URL, and the pipeline automatically extracts ATS keywords, researches the company, rewrites resume bullets to hit ≥ 90% keyword coverage, and exports a clean 2-page PDF.
 
-**Primary AI:** Groq API (`llama-3.3-70b-versatile`) — fast and free tier
-**Fallback AI:** OpenRouter (`google/gemini-2.5-flash`) — auto-switches on Groq rate-limit
-**PDF Engine:** Puppeteer (headless Chromium)
-**Preview Server:** Express.js with SSE live-reload
+**Live Web App:** [webapp-ten-beryl.vercel.app](https://webapp-ten-beryl.vercel.app)
+
+**Primary AI:** Groq API (`llama-3.1-8b-instant`) — 131K TPM, no rate-limit issues
+**Fallback AI:** OpenRouter (`google/gemini-2.0-flash-001`) — auto-switches on Groq failure
+**PDF Engine:** Browser `window.print()` — zero dependencies, works everywhere
+**Preview Server:** Express.js with SSE live-reload (local dev)
 
 ---
 
@@ -24,6 +26,59 @@ JD text input
     ├─► Write → tailored/<company>/resume_<company>_<role>.html
     ├─► Puppeteer → tailored/<company>/resume_<company>_<role>.pdf
     └─► SSE broadcast → auto-reload browser preview
+```
+
+---
+
+## Web App (Vercel)
+
+The webapp at [webapp-ten-beryl.vercel.app](https://webapp-ten-beryl.vercel.app) provides a ChatGPT-style interface for the full pipeline.
+
+### Features
+
+| Feature | Description |
+|---|---|
+| **Paste JD or URL** | Auto-detects company & role; supports Ashby, LinkedIn, Greenhouse, Wellfound |
+| **Live progress** | SSE streaming shows each step (fetching → keywords → research → tailoring) |
+| **Resume preview** | Side-by-side split view with page-break indicators at the A4 boundary |
+| **PDF download** | Opens a print-ready tab — saves as `Resume_Company_Role.pdf`, no browser headers/footers |
+| **Keyword coverage** | Shows green ✓ present / red ✗ missing badges; expand to see all keywords |
+| **Q&A mode** | After tailoring, ask application portal questions — answered in first-person using your resume + company context |
+| **Edit mode** | Type instructions like *"remove the Spring Boot bullet"* or *"add Docker to skills"* — preview updates instantly |
+
+### Web App Structure
+
+```
+webapp/
+├── src/
+│   ├── app/
+│   │   ├── page.tsx                  # Chat UI — tailor / Q&A / edit modes
+│   │   └── api/
+│   │       ├── tailor/route.ts       # SSE pipeline: keywords → research → tailor
+│   │       ├── fetch-jd/route.ts     # Scrape & clean job description from URL
+│   │       ├── answer/route.ts       # Answer application questions in first-person
+│   │       └── edit/route.ts         # Edit resume via chat instruction
+│   ├── lib/
+│   │   ├── groq.ts                   # Groq (8b primary) + OpenRouter Gemini Flash fallback
+│   │   └── tailor.ts                 # Pipeline: extractKeywords → researchCompany → tailorHtml
+│   └── data/
+│       └── resume_base.html          # Master resume embedded for Vercel serverless access
+└── .env.local                        # GROQ_API_KEY, OPENROUTER_API_KEY
+```
+
+### How the Chat Modes Work
+
+After a resume is generated, the input box intelligently routes:
+
+```
+Short message starting with "add", "remove", "change", "fix"...
+    → Edit mode: patches HTML in-place, refreshes preview
+
+Short message / question (< 600 chars, not a URL)
+    → Q&A mode: answers the question using resume + company context
+
+URL or long text (> 600 chars)
+    → New tailoring run
 ```
 
 ---
@@ -230,7 +285,7 @@ node generate_pdf.js resume_base.html resume_base.pdf
 | 9 | Write HTML → `tailored/<company>/resume_<co>_<role>.html` |
 | 10 | Spawn `node generate_pdf.js` subprocess → PDF |
 
-**Rate limit handling:** If Groq returns HTTP 429, the pipeline automatically retries the same call via OpenRouter (`gemini-2.5-flash`) with no user intervention needed.
+**Rate limit handling:** If Groq returns HTTP 429, the pipeline waits 3s, retries once, then automatically falls back to OpenRouter (`google/gemini-2.0-flash-001`) with no user intervention needed.
 
 ---
 

@@ -16,16 +16,20 @@ interface TailorResult {
   html: string; htmlUrl: string;
   before: CoverageResult; after: CoverageResult;
   keywords: string[]; slug: string;
+  research?: string;
 }
 
 type Message =
   | { type: 'user';     text: string }
   | { type: 'thinking'; steps: Step[] }
   | { type: 'result';   result: TailorResult }
+  | { type: 'answer';   text: string }
+  | { type: 'edited';   summary: string }
   | { type: 'error';    text: string };
 
 /* ─── Helpers ────────────────────────────────────────────────────────────── */
 const isUrl = (s: string) => /^https?:\/\//i.test(s.trim());
+const isEditIntent = (s: string) => /^(add|remove|delete|change|update|edit|replace|rewrite|shorten|expand|modify|fix|move|insert|take out|get rid|put |make |can you (add|remove|change|fix|update|rewrite)|please (add|remove|change|fix)|include|exclude)/i.test(s.trim());
 
 function CoverageBadge({ pct }: { pct: number }) {
   const color = pct >= 90 ? '#22c55e' : pct >= 70 ? '#f59e0b' : '#ef4444';
@@ -48,6 +52,14 @@ function StepsList({ steps }: { steps: Step[] }) {
 }
 
 function ResultCard({ result, onView }: { result: TailorResult; onView: (r: TailorResult) => void }) {
+  const [expanded, setExpanded] = useState(false);
+  const PREVIEW = 5;
+  const covered = result.after.covered;
+  const missing = result.after.missing;
+  const shownCovered = expanded ? covered : covered.slice(0, PREVIEW);
+  const shownMissing = expanded ? missing : missing.slice(0, PREVIEW);
+  const hiddenCount = (covered.length - shownCovered.length) + (missing.length - shownMissing.length);
+
   return (
     <div style={{ background: '#1a1a2e', border: '1px solid #2a2a3e', borderRadius: 12, padding: 16, maxWidth: 380 }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 12 }}>
@@ -65,17 +77,30 @@ function ResultCard({ result, onView }: { result: TailorResult; onView: (r: Tail
         </div>
       </div>
 
-      {result.after.missing.length > 0 && (
-        <div style={{ marginBottom: 12 }}>
-          <div style={{ fontSize: 11, color: '#666', marginBottom: 5 }}>Missing ({result.after.missing.length})</div>
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>
-            {result.after.missing.slice(0, 5).map((kw, i) => (
-              <span key={i} style={{ background: '#2a1212', color: '#f87171', border: '1px solid #3d1515', borderRadius: 4, padding: '1px 7px', fontSize: 11 }}>{kw}</span>
-            ))}
-            {result.after.missing.length > 5 && <span style={{ color: '#555', fontSize: 11, alignSelf: 'center' }}>+{result.after.missing.length - 5}</span>}
-          </div>
+      <div style={{ marginBottom: 12 }}>
+        <div style={{ display: 'flex', gap: 10, marginBottom: 6 }}>
+          <span style={{ fontSize: 11, color: '#4ade80' }}>✓ {covered.length} present</span>
+          <span style={{ fontSize: 11, color: '#f87171' }}>✗ {missing.length} missing</span>
         </div>
-      )}
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>
+          {shownCovered.map((kw, i) => (
+            <span key={`c${i}`} style={{ background: '#0a1f12', color: '#4ade80', border: '1px solid #1a4a2a', borderRadius: 4, padding: '1px 7px', fontSize: 11 }}>{kw}</span>
+          ))}
+          {shownMissing.map((kw, i) => (
+            <span key={`m${i}`} style={{ background: '#2a1212', color: '#f87171', border: '1px solid #3d1515', borderRadius: 4, padding: '1px 7px', fontSize: 11 }}>{kw}</span>
+          ))}
+          {!expanded && hiddenCount > 0 && (
+            <button onClick={() => setExpanded(true)} style={{ background: 'transparent', border: '1px solid #2a2a2a', color: '#555', borderRadius: 4, padding: '1px 7px', fontSize: 11, cursor: 'pointer' }}>
+              +{hiddenCount} more
+            </button>
+          )}
+          {expanded && (
+            <button onClick={() => setExpanded(false)} style={{ background: 'transparent', border: '1px solid #2a2a2a', color: '#555', borderRadius: 4, padding: '1px 7px', fontSize: 11, cursor: 'pointer' }}>
+              show less
+            </button>
+          )}
+        </div>
+      </div>
 
       <button
         onClick={() => onView(result)}
@@ -91,6 +116,16 @@ function PreviewPanel({ result, onClose }: { result: TailorResult; onClose: () =
   const iframeRef = useRef<HTMLIFrameElement>(null);
   const src = `data:text/html;charset=utf-8,${encodeURIComponent(result.html)}`;
 
+  function handleDownload() {
+    const win = window.open('', '_blank');
+    if (!win) { alert('Allow pop-ups to download PDF'); return; }
+    const slug = `Resume_${result.company}_${result.role}`.replace(/[^a-zA-Z0-9]+/g, '_').replace(/^_|_$/g, '');
+    win.document.open();
+    win.document.write(result.html.replace(/<title>[^<]*<\/title>/, `<title>${slug}</title>`));
+    win.document.close();
+    win.addEventListener('load', () => { win.focus(); win.print(); }, { once: true });
+  }
+
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 20px', borderBottom: '1px solid #222', background: '#161616', flexShrink: 0 }}>
@@ -102,7 +137,7 @@ function PreviewPanel({ result, onClose }: { result: TailorResult; onClose: () =
         </div>
         <div style={{ display: 'flex', gap: 8 }}>
           <button
-            onClick={() => iframeRef.current?.contentWindow?.print()}
+            onClick={handleDownload}
             style={{ background: '#6366f1', color: '#fff', border: 'none', borderRadius: 8, padding: '7px 14px', fontSize: 13, fontWeight: 500, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6 }}
           >
             <Download size={13} /> Download PDF
@@ -113,13 +148,23 @@ function PreviewPanel({ result, onClose }: { result: TailorResult; onClose: () =
           >✕</button>
         </div>
       </div>
-      <div style={{ flex: 1, overflowY: 'auto', background: '#555', display: 'flex', justifyContent: 'center', padding: 24 }}>
-        <iframe
-          ref={iframeRef}
-          src={src}
-          style={{ width: 794, minHeight: 1123, border: 'none', boxShadow: '0 8px 40px rgba(0,0,0,0.6)', borderRadius: 2 }}
-          title="Resume Preview"
-        />
+      <div style={{ flex: 1, overflowY: 'auto', background: '#444', display: 'flex', justifyContent: 'center', padding: '24px 24px 48px' }}>
+        <div style={{ position: 'relative', width: 794 }}>
+          <iframe
+            ref={iframeRef}
+            src={src}
+            style={{ width: 794, height: 2246, border: 'none', boxShadow: '0 8px 40px rgba(0,0,0,0.6)', borderRadius: 2, display: 'block' }}
+            title="Resume Preview"
+          />
+          {/* Page 1 / Page 2 break at 1123px */}
+          <div style={{ position: 'absolute', top: 1123, left: -32, right: -32, pointerEvents: 'none', zIndex: 10 }}>
+            <div style={{ height: 3, background: '#ef4444', opacity: 0.85 }} />
+            <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 4 }}>
+              <span style={{ background: '#ef4444', color: '#fff', fontSize: 10, fontWeight: 700, padding: '2px 8px', borderRadius: '0 0 4px 4px', letterSpacing: 0.5 }}>PAGE 1 END</span>
+              <span style={{ background: '#ef4444', color: '#fff', fontSize: 10, fontWeight: 700, padding: '2px 8px', borderRadius: '0 0 4px 4px', letterSpacing: 0.5 }}>PAGE 2 START</span>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   );
@@ -158,6 +203,60 @@ export default function Home() {
       if (i !== thinkingIdx || m.type !== 'thinking') return m;
       return { ...m, steps: m.steps.map(s => s.id === id ? { ...s, done: true } : s) };
     }));
+
+    // Find the most recent result for context
+    const activeResult = preview ?? (messages.slice().reverse().find(m => m.type === 'result') as { type: 'result'; result: TailorResult } | undefined)?.result;
+
+    // Edit mode: instruction to modify the resume
+    if (activeResult && !isUrl(text) && text.length < 600 && isEditIntent(text)) {
+      try {
+        setMessages(prev => prev.map((m, i) => i === thinkingIdx && m.type === 'thinking'
+          ? { ...m, steps: [{ id: 'editing', message: 'Editing resume...', done: false }] } : m));
+        const r = await fetch('/api/edit', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ instruction: text, html: activeResult.html }),
+        });
+        const d = await r.json();
+        if (d.error) throw new Error(d.error);
+        const updatedResult = { ...activeResult, html: d.html };
+        setPreview(updatedResult);
+        // Also update the result card in messages so future edits use latest HTML
+        setMessages(prev => prev.map(m => m.type === 'result' && m.result === activeResult
+          ? { ...m, result: updatedResult } : m));
+        setMessages(prev => prev.map((m, i) => i === thinkingIdx
+          ? { type: 'edited' as const, summary: 'Done! Resume updated — check the preview.' } : m));
+      } catch (e) {
+        setMessages(prev => prev.map((m, i) => i === thinkingIdx ? { type: 'error' as const, text: String(e) } : m));
+      }
+      setLoading(false);
+      return;
+    }
+
+    // Q&A mode: if a resume is already generated and input looks like a question (not URL, not long JD)
+    const activeResult2 = activeResult;
+    if (activeResult2 && !isUrl(text) && text.length < 600) {
+      try {
+        const r = await fetch('/api/answer', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            question: text,
+            company: activeResult2.company,
+            role: activeResult2.role,
+            research: activeResult2.research ?? '',
+            resumeHtml: activeResult2.html,
+          }),
+        });
+        const d = await r.json();
+        if (d.error) throw new Error(d.error);
+        setMessages(prev => prev.map((m, i) => i === thinkingIdx ? { type: 'answer' as const, text: d.answer } : m));
+      } catch (e) {
+        setMessages(prev => prev.map((m, i) => i === thinkingIdx ? { type: 'error' as const, text: String(e) } : m));
+      }
+      setLoading(false);
+      return;
+    }
 
     let jd = text;
 
@@ -267,6 +366,22 @@ export default function Home() {
                   </div>
                 </div>
               )}
+              {m.type === 'edited' && (
+                <div style={{ display: 'flex', gap: 9 }}>
+                  <div style={{ width: 26, height: 26, borderRadius: '50%', background: '#1a1a2e', border: '1px solid #252540', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, flexShrink: 0, marginTop: 1 }}>✦</div>
+                  <div style={{ background: '#0f1f0f', border: '1px solid #1a3a1a', borderRadius: '3px 12px 12px 12px', padding: '10px 14px', fontSize: 13, color: '#4ade80', display: 'flex', alignItems: 'center', gap: 7 }}>
+                    <CheckCircle size={13} color="#4ade80" /> {m.summary}
+                  </div>
+                </div>
+              )}
+              {m.type === 'answer' && (
+                <div style={{ display: 'flex', gap: 9 }}>
+                  <div style={{ width: 26, height: 26, borderRadius: '50%', background: '#1a1a2e', border: '1px solid #252540', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, flexShrink: 0, marginTop: 1 }}>✦</div>
+                  <div style={{ background: '#111820', border: '1px solid #1a2a1a', borderRadius: '3px 12px 12px 12px', padding: '12px 15px', fontSize: 13, color: '#d4e8d4', lineHeight: 1.65, maxWidth: '88%', whiteSpace: 'pre-wrap' }}>
+                    {m.text}
+                  </div>
+                </div>
+              )}
               {m.type === 'error' && (
                 <div style={{ display: 'flex', gap: 9 }}>
                   <div style={{ width: 26, height: 26, borderRadius: '50%', background: '#2a1212', border: '1px solid #3d1a1a', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
@@ -290,7 +405,7 @@ export default function Home() {
               onChange={e => setInput(e.target.value)}
               onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSubmit(); } }}
               onInput={e => { const t = e.currentTarget; t.style.height = 'auto'; t.style.height = `${Math.min(t.scrollHeight, 180)}px`; }}
-              placeholder="Paste job URL or description..."
+              placeholder={preview ? 'Edit resume, ask a question, or paste a new JD/URL...' : 'Paste job URL or description...'}
               rows={1}
               disabled={loading}
               style={{ flex: 1, background: 'transparent', border: 'none', outline: 'none', color: '#e8e8e8', fontSize: 13, resize: 'none', maxHeight: 180, lineHeight: 1.5, fontFamily: 'inherit', paddingTop: 3 }}

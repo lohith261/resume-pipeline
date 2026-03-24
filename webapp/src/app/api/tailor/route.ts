@@ -72,6 +72,7 @@ export async function POST(req: NextRequest) {
           before:   result.before,
           after:    result.after,
           keywords: result.keywords,
+          research: result.research,
           slug,
         });
       } catch (e: unknown) {

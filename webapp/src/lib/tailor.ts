@@ -1,4 +1,4 @@
-import { groq } from './groq';
+import { groq, groqFast } from './groq';
 import fs from 'fs';
 import path from 'path';
 
@@ -40,9 +40,9 @@ export function scoreCoverage(keywords: string[], html: string): CoverageResult 
 }
 
 export async function extractKeywords(jd: string): Promise<string[]> {
-  const res = await groq(
-    'You are an ATS keyword extraction engine. Extract ALL important technical keywords, tools, frameworks, methodologies from the job description. Return ONLY a JSON array of strings. No explanation. No markdown.',
-    `Extract keywords:\n\n${jd.slice(0, 4000)}`,
+  const res = await groqFast(
+    'You are an ATS keyword extraction engine. Extract ONLY technical skills, programming languages, tools, frameworks, platforms, and methodologies from the job description. Do NOT include job titles, seniority levels (Mid-Sr, Senior, Junior), locations, work types (Full-time, Remote), or company names. Return ONLY a JSON array of strings. No explanation. No markdown.',
+    `Extract technical keywords only:\n\n${jd.slice(0, 4000)}`,
     1000,
   );
   try {
@@ -54,7 +54,7 @@ export async function extractKeywords(jd: string): Promise<string[]> {
 }
 
 export async function detectCompanyRole(jd: string): Promise<{ company: string; role: string }> {
-  const res = await groq(
+  const res = await groqFast(
     'Extract the company name and job role title from this job description. Return ONLY valid JSON: {"company":"...","role":"..."}',
     jd.slice(0, 2000),
     200,
@@ -68,7 +68,7 @@ export async function detectCompanyRole(jd: string): Promise<{ company: string; 
 }
 
 export async function researchCompany(company: string, role: string): Promise<string> {
-  return groq(
+  return groqFast(
     'You are a job application research assistant. Give a concise 3-5 sentence summary of the company\'s tech focus, culture, and what they value in engineers. Be factual and brief.',
     `Company: ${company}\nRole: ${role}`,
     400,
@@ -84,7 +84,7 @@ export async function tailorHtml(
 ): Promise<string> {
   if (!missing.length) return baseHtml;
 
-  const tailored = await groq(
+  const tailored = await groqFast(
     'You are a professional resume tailoring assistant. Return ONLY the complete HTML — no explanation, no markdown fences.',
     `You are tailoring an HTML resume for a job application.
 

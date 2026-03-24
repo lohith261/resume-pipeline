@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { groq } from '@/lib/groq';
+import { groqFast } from '@/lib/groq';
 
 export async function POST(req: NextRequest) {
   const { url } = await req.json();
@@ -22,7 +22,7 @@ export async function POST(req: NextRequest) {
       .slice(0, 6000);
 
     // Use Groq to extract structured JD
-    const jd = await groq(
+    const jd = await groqFast(
       'You are a job description extractor. From the raw webpage text, extract the clean job description including: role title, company, responsibilities, requirements, tech stack. Remove navigation, footer, cookie notices etc. Return clean plain text only.',
       text,
       2000,
