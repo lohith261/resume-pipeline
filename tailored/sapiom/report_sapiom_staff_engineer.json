@@ -1,0 +1,86 @@
+{
+  "company": "Sapiom",
+  "role": "Staff Engineer",
+  "company_research": "Sapiom is an AI-powered company that focuses on developing innovative software solutions using machine learning and natural language processing. The company culture values collaboration, creativity, and technical excellence, with a strong emphasis on continuous learning and growth. To tailor your resume, highlight your expertise in AI, ML, and software development, as well as your ability to work collaboratively and drive technical innovation. Additionally, showcase your problem-solving skills and passion for staying up-to-date with the latest technologies and trends in the field.",
+  "keywords": [
+    "AI",
+    "API",
+    "Operating System",
+    "AI Agents",
+    "Autonomous Transactions",
+    "Security",
+    "Infrastructure",
+    "Agentic Economy",
+    "Machine Economy",
+    "Cloud Computing",
+    "API Economy",
+    "Trusted Access",
+    "Real-World Systems",
+    "Software Development",
+    "System Architecture",
+    "Backend Development",
+    "Full Stack Development",
+    "DevOps",
+    "Cloud Infrastructure",
+    "Artificial Intelligence",
+    "Machine Learning"
+  ],
+  "before": {
+    "covered": [
+      "AI",
+      "API",
+      "Infrastructure",
+      "DevOps",
+      "Artificial Intelligence"
+    ],
+    "missing": [
+      "Operating System",
+      "AI Agents",
+      "Autonomous Transactions",
+      "Security",
+      "Agentic Economy",
+      "Machine Economy",
+      "Cloud Computing",
+      "API Economy",
+      "Trusted Access",
+      "Real-World Systems",
+      "Software Development",
+      "System Architecture",
+      "Backend Development",
+      "Full Stack Development",
+      "Cloud Infrastructure",
+      "Machine Learning"
+    ],
+    "pct_covered": 23.8,
+    "total": 21
+  },
+  "after": {
+    "covered": [
+      "AI",
+      "API",
+      "Operating System",
+      "AI Agents",
+      "Autonomous Transactions",
+      "Security",
+      "Infrastructure",
+      "Agentic Economy",
+      "Machine Economy",
+      "Cloud Computing",
+      "API Economy",
+      "Trusted Access",
+      "System Architecture",
+      "Backend Development",
+      "Full Stack Development",
+      "DevOps",
+      "Cloud Infrastructure",
+      "Artificial Intelligence",
+      "Machine Learning"
+    ],
+    "missing": [
+      "Real-World Systems",
+      "Software Development"
+    ],
+    "pct_covered": 90.5,
+    "total": 21
+  }
+}
