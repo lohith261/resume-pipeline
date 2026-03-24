@@ -1,0 +1,53 @@
+### Job Summary: AI/LLM Engineer at OneSeven Tech
+**Location:** Remote (Priority for remote hubs)  
+**Salary:** $2000 - $4500 /month  
+**Project Brief:**
+The role involves building AI-powered products using off-the-shelf LLM APIs and custom models. You will own end-to-end development of AI features, from prototyping to production, with a focus on reliability, accuracy, and scalable delivery.
+
+---
+
+### Must-Haves (Requirements)
+- **Strong Python engineering skills** and experience delivering production systems.
+- **Hands-on experience with LLM APIs** (OpenAI, Anthropic, etc.) and deploying AI features end-to-end.
+- **Experience with LangChain / LangGraph**, including Prompt Engineering, Token Management, and Agent creation with tool-based workflows.
+- **Solid understanding of RAG concepts**: retrieval, chunking, embeddings, re-ranking, and evaluation.
+- **Practical AWS experience**, especially AWS Lambda and serverless architecture patterns.
+- **Backend engineering experience**: RESTful API design, webhook integration, JWT, pytest, and observability tools like Sentry.
+- **Experience with Git repository analysis**: understanding large codebases, debugging, refactors, and code health.
+- **Ownership mindset**: Comfortable working in fast-moving product environments with high ownership.
+
+### Nice to Have
+- **NextJS and TypeScript** for frontend components and integration.
+- **AWS CDK** for infrastructure-as-code and deployment.
+- **Broader AWS services knowledge**: S3, CloudWatch, IAM, API Gateway.
+- **NoSQL databases** experience and experience integrating or serving custom models.
+- **Familiarity with evaluation frameworks** (offline tests, human feedback loops).
+
+---
+
+### Responsibilities (What You Will Do)
+- Build, iterate, and maintain backend AI microservices (FastAPI / Mangum).
+- Design and optimize RAG pipelines for performance and relevance.
+- Create autonomous agents and multi-step workflows using LangGraph and Python.
+- Deploy and monitor serverless infrastructure on AWS.
+- Deep dive into complex codebases to help understand, refactor, and build better AI-assisted features.
+- Collaborate daily with a remote engineering team across time zones.
+
+---
+
+### Company Information: About OneSeven Tech
+OneSeven Tech is a premier digital product agency serving startups and enterprises. Their clients have collectively raised over $100M in VC, and partners include 2,000+ person hospitality groups and NASDAQ-listed companies. They work fully remote, move fast with 1-week sprints, and focus on elegant solutions to complex problems.
+
+### Benefits & Compensation
+- Competitive remote-first salary ($2000 - $4500 /month).
+- Generous Paid Time Off and professional development budget.
+- Referral Program and a direct path to technical leadership as an early employee.
+
+---
+
+### To Apply
+Applicants are requested to provide:
+1. **LinkedIn Profile URL** (required)
+2. **GitHub Portfolio** showing best work (required)
+3. **Live Project Examples** (encouraged)
+4. **Cover Letter** explaining excitement for the role (optional but encouraged)

@@ -33,8 +33,12 @@ def load_env():
 load_env()
 
 GROK_API_KEY = os.environ.get("GROK_API_KEY", "")
+OPENROUTER_API_KEY = os.environ.get("OPENROUTER_API_KEY", "")
 GROK_URL     = "https://api.groq.com/openai/v1/chat/completions"
 GROK_MODEL   = "llama-3.3-70b-versatile"   # fast + cheap for tailoring tasks
+
+OPENROUTER_URL   = "https://openrouter.ai/api/v1/chat/completions"
+OPENROUTER_MODEL = "meta-llama/llama-3.3-70b-instruct"
 
 BASE_DIR   = Path(__file__).parent
 BASE_HTML  = BASE_DIR / "resume_base.html"
@@ -77,7 +81,45 @@ def grok(system: str, user: str, max_tokens: int = 2000) -> str:
             return data["choices"][0]["message"]["content"].strip()
     except URLError as e:
         err_msg = e.read().decode('utf-8') if hasattr(e, 'read') else str(e)
+        if "429" in str(e) or "Too Many Requests" in str(e):
+            print(f"[grok] Rate limit hit on Groq API. Falling back to OpenRouter API...")
+            return fallback_openrouter(system, user, max_tokens)
         raise RuntimeError(f"Grok API error: {e}\nDetails: {err_msg}")
+
+
+def fallback_openrouter(system: str, user: str, max_tokens: int) -> str:
+    if not OPENROUTER_API_KEY:
+        raise RuntimeError("OPENROUTER_API_KEY not set in .env and Groq API hit rate limit.")
+    payload = json.dumps({
+        "model": OPENROUTER_MODEL,
+        "max_tokens": 8000,
+        "messages": [
+            {"role": "system",  "content": system},
+            {"role": "user",    "content": user}
+        ]
+    }).encode()
+    req = Request(
+        OPENROUTER_URL,
+        data    = payload,
+        headers = {
+            "Content-Type":  "application/json",
+            "Authorization": f"Bearer {OPENROUTER_API_KEY}",
+            "HTTP-Referer": "http://localhost:3000",
+            "X-Title": "Resume Tailor"
+        },
+        method = "POST"
+    )
+    try:
+        import ssl
+        ctx = ssl.create_default_context()
+        ctx.check_hostname = False
+        ctx.verify_mode = ssl.CERT_NONE
+        with urlopen(req, timeout=60, context=ctx) as r:
+            data = json.loads(r.read())
+            return data["choices"][0]["message"]["content"].strip()
+    except URLError as e:
+        err_msg = e.read().decode('utf-8') if hasattr(e, 'read') else str(e)
+        raise RuntimeError(f"OpenRouter API fallback error: {e}\nDetails: {err_msg}")
 
 
 # ── helpers ──────────────────────────────────────────────────────────────────

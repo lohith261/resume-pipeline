@@ -1,0 +1,21 @@
+Bandreddy Sri Sai Lohith
+bandreddysrisailohith@gmail.com | 8688457071 | linkedin.com/in/srisailohith
+
+Hiring Team
+OneSeven Tech
+
+Dear Hiring Team at OneSeven Tech,
+
+I am writing to express my strong interest in the AI/LLM Engineer position at OneSeven Tech. As an engineer who thrives on taking AI features from rapid prototyping to robust production deployment, I was immediately drawn to OneSeven Tech’s fast-paced, product-focused environment and your commitment to building elegant solutions for complex problems. 
+
+In my current role as an AI Engineer at ADP, I architect and maintain end-to-end RAG pipelines and LLM-driven microservices serving over a million users. I have extensive hands-on experience using Python and LangChain to build autonomous agents and multi-step workflows. Recently, I deployed a LangChain-based investigation agent that automated root-cause analysis for payroll discrepancies, utilizing AWS Lambda and serverless architecture patterns to handle high-throughput demands efficiently. My work requires a deep understanding of the entire RAG lifecycle—from chunking and embeddings to re-ranking and offline evaluation—ensuring our AI features remain accurate, scalable, and highly reliable.
+
+Beyond my enterprise experience, I operate with a high-ownership mindset. I independently built and launched Job Tailor (jobtailor.in), a full-stack platform that leverages Next.js, TypeScript, and the Grok API to automatically tailor resumes and generate cover letters using AI-driven keyword matching. I also developed Keen, a personal AI assistant featuring persistent memory via vector embeddings and custom tool-calling capabilities. These projects demonstrate my ability to own the entire product lifecycle, design RESTful APIs, and integrate cutting-edge LLMs (OpenAI, Anthropic, xAI) into seamless user experiences.
+
+I am particularly excited about the opportunity to bring my backend expertise and passion for agentic workflows to OneSeven Tech's remote team. I am highly comfortable diving into complex codebases and moving quickly within 1-week sprints to deliver tangible value to your startup and enterprise clients.
+
+Thank you for considering my application. I have attached my GitHub portfolio and live project examples for your review, and I would welcome the opportunity to discuss how my skill set aligns with your engineering goals.
+
+Best regards,
+
+Bandreddy Sri Sai Lohith
