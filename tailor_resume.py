@@ -38,7 +38,7 @@ GROK_URL     = "https://api.groq.com/openai/v1/chat/completions"
 GROK_MODEL   = "llama-3.3-70b-versatile"   # fast + cheap for tailoring tasks
 
 OPENROUTER_URL   = "https://openrouter.ai/api/v1/chat/completions"
-OPENROUTER_MODEL = "meta-llama/llama-3.3-70b-instruct"
+OPENROUTER_MODEL = "google/gemini-2.5-flash"
 
 BASE_DIR   = Path(__file__).parent
 BASE_HTML  = BASE_DIR / "resume_base.html"
@@ -114,9 +114,13 @@ def fallback_openrouter(system: str, user: str, max_tokens: int) -> str:
         ctx = ssl.create_default_context()
         ctx.check_hostname = False
         ctx.verify_mode = ssl.CERT_NONE
-        with urlopen(req, timeout=60, context=ctx) as r:
-            data = json.loads(r.read())
-            return data["choices"][0]["message"]["content"].strip()
+        with urlopen(req, timeout=120, context=ctx) as r:
+            raw_data = r.read()
+            try:
+                data = json.loads(raw_data)
+                return data["choices"][0]["message"]["content"].strip()
+            except Exception as e:
+                raise RuntimeError(f"OpenRouter JSON Decode Error: {e}\nRaw Response: {raw_data.decode('utf-8', errors='ignore')}")
     except URLError as e:
         err_msg = e.read().decode('utf-8') if hasattr(e, 'read') else str(e)
         raise RuntimeError(f"OpenRouter API fallback error: {e}\nDetails: {err_msg}")
