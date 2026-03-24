@@ -33,16 +33,16 @@ export async function POST(req: NextRequest) {
         }
 
         const result = await runPipeline(jd, company, role, (step, data) => {
-          const messages: Record<string, string> = {
-            extracting:       'Extracting ATS keywords from JD...',
-            keywords:         `Found ${(data as { count: number }).count} keywords`,
-            coverage_before:  `Baseline coverage: ${(data as { pct: number }).pct}%`,
-            researching:      `Researching ${company}...`,
-            researched:       'Company research complete',
-            tailoring:        `Weaving in ${(data as { missing: number }).missing} missing keywords...`,
-            tailored:         `Tailoring complete`,
-          };
-          send('step', { id: step, message: messages[step] ?? step, data });
+          const d = data as Record<string, unknown> | undefined;
+          let message = step;
+          if (step === 'extracting')      message = 'Extracting ATS keywords from JD...';
+          else if (step === 'keywords')   message = `Found ${d?.count ?? '?'} keywords`;
+          else if (step === 'coverage_before') message = `Baseline coverage: ${d?.pct ?? '?'}%`;
+          else if (step === 'researching') message = `Researching ${company}...`;
+          else if (step === 'researched') message = 'Company research complete';
+          else if (step === 'tailoring')  message = `Weaving in ${d?.missing ?? '?'} missing keywords...`;
+          else if (step === 'tailored')   message = 'Tailoring complete';
+          send('step', { id: step, message, data });
         });
 
         // Store the tailored HTML
