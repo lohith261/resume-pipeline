@@ -3,7 +3,7 @@ const OPENROUTER_KEY    = process.env.OPENROUTER_API_KEY ?? '';
 const GROQ_URL          = 'https://api.groq.com/openai/v1/chat/completions';
 const GROQ_MODEL        = 'llama-3.3-70b-versatile';
 const OPENROUTER_URL    = 'https://openrouter.ai/api/v1/chat/completions';
-const OPENROUTER_MODEL  = 'google/gemini-2.5-flash';
+const OPENROUTER_MODEL  = 'meta-llama/llama-3.3-70b-instruct:free'; // free tier
 
 async function callLLM(
   url: string,
@@ -35,28 +35,43 @@ async function callLLM(
   return data.choices[0].message.content.trim();
 }
 
+async function callOpenRouter(system: string, user: string, maxTokens: number): Promise<string> {
+  if (!OPENROUTER_KEY) throw new Error('Groq rate limited and OPENROUTER_API_KEY not set');
+  console.warn('[groq] Falling back to OpenRouter');
+  return callLLM(
+    OPENROUTER_URL, OPENROUTER_MODEL,
+    {
+      Authorization: `Bearer ${OPENROUTER_KEY}`,
+      'HTTP-Referer': 'https://webapp-ten-beryl.vercel.app',
+      'X-Title': 'Resume Tailor',
+    },
+    system, user, Math.min(maxTokens, 3000),
+  );
+}
+
 export async function groq(system: string, user: string, maxTokens = 2000): Promise<string> {
-  try {
-    return await callLLM(
-      GROQ_URL, GROQ_MODEL,
-      { Authorization: `Bearer ${GROQ_API_KEY}` },
-      system, user, maxTokens,
-    );
-  } catch (e: unknown) {
-    const msg = e instanceof Error ? e.message : String(e);
-    if (msg === 'RATE_LIMIT' || msg.includes('429')) {
-      if (!OPENROUTER_KEY) throw new Error('Groq rate limited and OPENROUTER_API_KEY not set');
-      console.warn('[groq] Rate limit — falling back to OpenRouter');
+  // Try Groq with one retry after a short wait on rate limit
+  for (let attempt = 0; attempt < 2; attempt++) {
+    try {
       return await callLLM(
-        OPENROUTER_URL, OPENROUTER_MODEL,
-        {
-          Authorization: `Bearer ${OPENROUTER_KEY}`,
-          'HTTP-Referer': 'https://resume-tailor.vercel.app',
-          'X-Title': 'Resume Tailor',
-        },
-        system, user, 8000,
+        GROQ_URL, GROQ_MODEL,
+        { Authorization: `Bearer ${GROQ_API_KEY}` },
+        system, user, maxTokens,
       );
+    } catch (e: unknown) {
+      const msg = e instanceof Error ? e.message : String(e);
+      if (msg === 'RATE_LIMIT' || msg.includes('429')) {
+        if (attempt === 0) {
+          // Wait 3s then retry Groq once before falling back
+          await new Promise(r => setTimeout(r, 3000));
+          continue;
+        }
+        // Second attempt also rate limited — use OpenRouter
+        return callOpenRouter(system, user, maxTokens);
+      }
+      throw e;
     }
-    throw e;
   }
+  // Should never reach here but TypeScript needs it
+  return callOpenRouter(system, user, maxTokens);
 }
