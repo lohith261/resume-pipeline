@@ -43,6 +43,7 @@ The webapp at [webapp-ten-beryl.vercel.app](https://webapp-ten-beryl.vercel.app)
 | **Resume preview** | Side-by-side split view with page-break indicators at the A4 boundary |
 | **PDF download** | Opens a print-ready tab — saves as `Resume_Company_Role.pdf`, no browser headers/footers |
 | **Keyword coverage** | Shows green ✓ present / red ✗ missing badges; expand to see all keywords |
+| **Bullet diff** | Collapsible changelog showing exactly which bullets were modified (before → after) and which were added |
 | **Q&A mode** | After tailoring, ask application portal questions — answered in first-person using your resume + company context |
 | **Edit mode** | Type instructions like *"remove the Spring Boot bullet"* or *"add Docker to skills"* — preview updates instantly |
 
@@ -80,6 +81,14 @@ Short message / question (< 600 chars, not a URL)
 URL or long text (> 600 chars)
     → New tailoring run
 ```
+
+### Bullet Diff (Changes Changelog)
+
+Every tailoring run computes a word-level diff between the base resume and the tailored output:
+
+- **Modified bullets** — shown with the original text struck through in gray, new version in green below it
+- **Added bullets** — shown with a `+` prefix in indigo (only appear when >10% of keywords couldn't fit in existing bullets)
+- Collapsed by default under `✏️ N bullets modified · ➕ N added` — click to expand
 
 ---
 
