@@ -280,6 +280,7 @@ export default function Home() {
       const reader = res.body!.getReader();
       const decoder = new TextDecoder();
       let buf = '';
+      let event = ''; // must persist across chunks
 
       while (true) {
         const { done, value } = await reader.read();
@@ -287,7 +288,6 @@ export default function Home() {
         buf += decoder.decode(value, { stream: true });
         const lines = buf.split('\n');
         buf = lines.pop() ?? '';
-        let event = '';
         for (const line of lines) {
           if (line.startsWith('event: ')) { event = line.slice(7).trim(); continue; }
           if (!line.startsWith('data: ')) continue;
