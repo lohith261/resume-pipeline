@@ -128,6 +128,7 @@ export async function tailorHtml(
   company: string,
   role: string,
   research: string,
+  isSecondPass = false,
 ): Promise<string> {
   if (!missing.length) return baseHtml;
 
@@ -139,14 +140,16 @@ Company: ${company}
 Role: ${role}
 Company context: ${research}
 
-Missing keywords to weave in: ${missing.slice(0, 40).join(', ')}
+${isSecondPass ? '⚠️ SECOND PASS — these keywords were STILL MISSING after the first edit. You MUST include each one.' : 'Keywords to weave in:'}
+${missing.slice(0, 40).map(k => `• "${k}"`).join('\n')}
 
-Rules:
-- Edit existing bullet points to naturally incorporate missing keywords where they fit
-- If >10% of important keywords cannot fit in existing bullets, add 1-2 new bullets max
-- CRITICAL: Page 1 is space-constrained. If you add text, condense or remove a less important bullet to keep 2-page layout
+CRITICAL RULES:
+- Each keyword phrase above MUST appear verbatim (exact spelling, exact capitalisation) somewhere in the resume
+- Weave them naturally into existing bullet points — do not keyword-stuff
+- If a keyword truly cannot fit an existing bullet, add a new concise bullet (max 1–2 additions)
+- Page 1 is space-constrained — if you add text, shorten another bullet to compensate
 - NEVER fabricate experience — only enhance what already exists
-- Write natural human English — no buzzword soup
+- Write natural human English
 - Do NOT change HTML structure, CSS, or section headings
 - Return the COMPLETE modified HTML — nothing else
 
@@ -179,10 +182,19 @@ export async function runPipeline(
   let after = before;
 
   if (before.pct < 90 && before.missing.length) {
+    // First pass
     onStep('tailoring', { missing: before.missing.length });
-    html = await tailorHtml(baseHtml, before.missing, company, role, research);
+    html = await tailorHtml(baseHtml, before.missing, company, role, research, false);
     after = scoreCoverage(keywords, html);
     onStep('tailored', { pct: after.pct });
+
+    // Second pass if still below 90% and meaningful keywords remain
+    if (after.pct < 90 && after.missing.length > 0) {
+      onStep('tailoring2', { missing: after.missing.length });
+      html = await tailorHtml(html, after.missing, company, role, research, true);
+      after = scoreCoverage(keywords, html);
+      onStep('tailored', { pct: after.pct });
+    }
   } else {
     onStep('tailored', { pct: before.pct, skipped: true });
   }

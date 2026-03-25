@@ -2,7 +2,7 @@ import { NextRequest } from 'next/server';
 import { runPipeline, detectCompanyRole, slugify } from '@/lib/tailor';
 import { put } from '@vercel/blob';
 
-export const maxDuration = 120;
+export const maxDuration = 300;
 
 export async function POST(req: NextRequest) {
   const { jd, company: companyHint, role: roleHint } = await req.json();
@@ -41,6 +41,7 @@ export async function POST(req: NextRequest) {
           else if (step === 'researching') message = `Researching ${company}...`;
           else if (step === 'researched') message = 'Company research complete';
           else if (step === 'tailoring')  message = `Weaving in ${d?.missing ?? '?'} missing keywords...`;
+          else if (step === 'tailoring2') message = `2nd pass — ${d?.missing ?? '?'} keywords still missing, trying again...`;
           else if (step === 'tailored')   message = 'Tailoring complete';
           send('step', { id: step, message, data });
         });
