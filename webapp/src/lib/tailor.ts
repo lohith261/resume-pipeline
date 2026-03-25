@@ -9,6 +9,12 @@ export interface CoverageResult {
   total: number;
 }
 
+export interface BulletChange {
+  type: 'modified' | 'added';
+  before?: string;   // original bullet (for modified)
+  after: string;     // new bullet text
+}
+
 export interface TailorResult {
   html: string;
   before: CoverageResult;
@@ -17,6 +23,47 @@ export interface TailorResult {
   company: string;
   role: string;
   research: string;
+  changes: BulletChange[];
+}
+
+/** Extract plain-text content of every <li> in an HTML string */
+function extractBullets(html: string): string[] {
+  return [...html.matchAll(/<li[^>]*>([\s\S]*?)<\/li>/gi)]
+    .map(m => m[1].replace(/<[^>]+>/g, '').replace(/\s+/g, ' ').trim())
+    .filter(s => s.length > 15);
+}
+
+/** Jaccard word-level similarity between two strings (0–1) */
+function wordSim(a: string, b: string): number {
+  const wa = new Set(a.toLowerCase().split(/\W+/).filter(Boolean));
+  const wb = new Set(b.toLowerCase().split(/\W+/).filter(Boolean));
+  let inter = 0;
+  wa.forEach(w => { if (wb.has(w)) inter++; });
+  return inter / (wa.size + wb.size - inter || 1);
+}
+
+/** Diff base vs tailored bullets → list of changes */
+function computeChanges(baseHtml: string, tailoredHtml: string): BulletChange[] {
+  const baseBullets = extractBullets(baseHtml);
+  const tailoredBullets = extractBullets(tailoredHtml);
+  const baseSet = new Set(baseBullets);
+  const changes: BulletChange[] = [];
+
+  for (const tb of tailoredBullets) {
+    if (baseSet.has(tb)) continue; // unchanged
+    // Find best matching original bullet
+    let bestScore = 0, bestMatch = '';
+    for (const bb of baseBullets) {
+      const s = wordSim(bb, tb);
+      if (s > bestScore) { bestScore = s; bestMatch = bb; }
+    }
+    if (bestScore > 0.35) {
+      changes.push({ type: 'modified', before: bestMatch, after: tb });
+    } else {
+      changes.push({ type: 'added', after: tb });
+    }
+  }
+  return changes;
 }
 
 function slugify(text: string) {
@@ -140,7 +187,8 @@ export async function runPipeline(
     onStep('tailored', { pct: before.pct, skipped: true });
   }
 
-  return { html, before, after, keywords, company, role, research };
+  const changes = computeChanges(baseHtml, html);
+  return { html, before, after, keywords, company, role, research, changes };
 }
 
 export { slugify };

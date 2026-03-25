@@ -11,12 +11,19 @@ interface CoverageResult {
   missing: string[]; covered: string[];
 }
 
+interface BulletChange {
+  type: 'modified' | 'added';
+  before?: string;
+  after: string;
+}
+
 interface TailorResult {
   company: string; role: string;
   html: string; htmlUrl: string;
   before: CoverageResult; after: CoverageResult;
   keywords: string[]; slug: string;
   research?: string;
+  changes?: BulletChange[];
 }
 
 type Message =
@@ -52,16 +59,21 @@ function StepsList({ steps }: { steps: Step[] }) {
 }
 
 function ResultCard({ result, onView }: { result: TailorResult; onView: (r: TailorResult) => void }) {
-  const [expanded, setExpanded] = useState(false);
+  const [kwExpanded, setKwExpanded]       = useState(false);
+  const [changesExpanded, setChangesExpanded] = useState(false);
   const PREVIEW = 5;
   const covered = result.after.covered;
   const missing = result.after.missing;
-  const shownCovered = expanded ? covered : covered.slice(0, PREVIEW);
-  const shownMissing = expanded ? missing : missing.slice(0, PREVIEW);
+  const shownCovered = kwExpanded ? covered : covered.slice(0, PREVIEW);
+  const shownMissing = kwExpanded ? missing : missing.slice(0, PREVIEW);
   const hiddenCount = (covered.length - shownCovered.length) + (missing.length - shownMissing.length);
+  const changes = result.changes ?? [];
+  const modified = changes.filter(c => c.type === 'modified');
+  const added    = changes.filter(c => c.type === 'added');
 
   return (
     <div style={{ background: '#1a1a2e', border: '1px solid #2a2a3e', borderRadius: 12, padding: 16, maxWidth: 380 }}>
+      {/* Header */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 12 }}>
         <div>
           <div style={{ fontWeight: 600, fontSize: 14 }}>{result.company}</div>
@@ -77,6 +89,7 @@ function ResultCard({ result, onView }: { result: TailorResult; onView: (r: Tail
         </div>
       </div>
 
+      {/* Keywords */}
       <div style={{ marginBottom: 12 }}>
         <div style={{ display: 'flex', gap: 10, marginBottom: 6 }}>
           <span style={{ fontSize: 11, color: '#4ade80' }}>✓ {covered.length} present</span>
@@ -89,18 +102,51 @@ function ResultCard({ result, onView }: { result: TailorResult; onView: (r: Tail
           {shownMissing.map((kw, i) => (
             <span key={`m${i}`} style={{ background: '#2a1212', color: '#f87171', border: '1px solid #3d1515', borderRadius: 4, padding: '1px 7px', fontSize: 11 }}>{kw}</span>
           ))}
-          {!expanded && hiddenCount > 0 && (
-            <button onClick={() => setExpanded(true)} style={{ background: 'transparent', border: '1px solid #2a2a2a', color: '#555', borderRadius: 4, padding: '1px 7px', fontSize: 11, cursor: 'pointer' }}>
+          {!kwExpanded && hiddenCount > 0 && (
+            <button onClick={() => setKwExpanded(true)} style={{ background: 'transparent', border: '1px solid #2a2a2a', color: '#555', borderRadius: 4, padding: '1px 7px', fontSize: 11, cursor: 'pointer' }}>
               +{hiddenCount} more
             </button>
           )}
-          {expanded && (
-            <button onClick={() => setExpanded(false)} style={{ background: 'transparent', border: '1px solid #2a2a2a', color: '#555', borderRadius: 4, padding: '1px 7px', fontSize: 11, cursor: 'pointer' }}>
+          {kwExpanded && (
+            <button onClick={() => setKwExpanded(false)} style={{ background: 'transparent', border: '1px solid #2a2a2a', color: '#555', borderRadius: 4, padding: '1px 7px', fontSize: 11, cursor: 'pointer' }}>
               show less
             </button>
           )}
         </div>
       </div>
+
+      {/* Changes diff */}
+      {changes.length > 0 && (
+        <div style={{ marginBottom: 12, borderTop: '1px solid #222', paddingTop: 10 }}>
+          <button
+            onClick={() => setChangesExpanded(p => !p)}
+            style={{ background: 'transparent', border: 'none', color: '#a0a0ff', fontSize: 12, cursor: 'pointer', padding: 0, display: 'flex', alignItems: 'center', gap: 5, marginBottom: changesExpanded ? 8 : 0 }}
+          >
+            <ChevronRight size={11} style={{ transform: changesExpanded ? 'rotate(90deg)' : 'none', transition: '0.15s' }} />
+            ✏️ {modified.length} bullet{modified.length !== 1 ? 's' : ''} modified
+            {added.length > 0 && ` · ➕ ${added.length} added`}
+          </button>
+
+          {changesExpanded && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+              {modified.map((c, i) => (
+                <div key={`m${i}`} style={{ background: '#111', borderRadius: 6, padding: '8px 10px', fontSize: 11, lineHeight: 1.5 }}>
+                  <div style={{ color: '#666', textDecoration: 'line-through', marginBottom: 4 }}>
+                    {c.before}
+                  </div>
+                  <div style={{ color: '#4ade80' }}>↳ {c.after}</div>
+                </div>
+              ))}
+              {added.map((c, i) => (
+                <div key={`a${i}`} style={{ background: '#0a1020', border: '1px solid #1a2a4a', borderRadius: 6, padding: '8px 10px', fontSize: 11, lineHeight: 1.5 }}>
+                  <span style={{ color: '#6366f1', marginRight: 5 }}>+</span>
+                  <span style={{ color: '#a0b4ff' }}>{c.after}</span>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
 
       <button
         onClick={() => onView(result)}
