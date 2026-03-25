@@ -95,12 +95,31 @@ async function callGroq(
   return callOpenRouter(system, user, maxTokens);
 }
 
-/** Fast model (llama-3.1-8b-instant, 131K TPM) — use for keyword extraction, research, etc. */
+/** Fast model (llama-3.1-8b-instant) — keyword extraction, research, small tasks. */
 export async function groqFast(system: string, user: string, maxTokens = 1000): Promise<string> {
   return callGroq(GROQ_MODEL_FAST, system, user, maxTokens);
 }
 
-/** Smart model (llama-3.3-70b-versatile, 6K TPM) — use only for resume tailoring. */
+/** Smart model (llama-3.3-70b-versatile) — use for tailoring. */
 export async function groq(system: string, user: string, maxTokens = 2000): Promise<string> {
   return callGroq(GROQ_MODEL_SMART, system, user, maxTokens);
+}
+
+/**
+ * Large-input tasks (HTML editing, cover letters).
+ * Routes directly to OpenRouter (no TPM limits on paid tier).
+ * Falls back to Groq smart model if OpenRouter unavailable.
+ */
+export async function groqLarge(system: string, user: string, maxTokens = 6000): Promise<string> {
+  if (OPENROUTER_KEY) return callOpenRouter(system, user, maxTokens);
+  return callGroq(GROQ_MODEL_SMART, system, user, maxTokens);
+}
+
+/** Strip HTML comments + collapse whitespace to shrink token count ~25% */
+export function compressHtml(html: string): string {
+  return html
+    .replace(/<!--[\s\S]*?-->/g, '')   // remove HTML comments
+    .replace(/\s{2,}/g, ' ')           // collapse whitespace runs
+    .replace(/>\s+</g, '><')           // remove space between tags
+    .trim();
 }

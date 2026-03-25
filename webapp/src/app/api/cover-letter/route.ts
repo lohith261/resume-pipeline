@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { groqFast } from '@/lib/groq';
+import { groqFast, compressHtml } from '@/lib/groq';
 
 function stripHtml(html: string): string {
   return html
@@ -15,7 +15,7 @@ export async function POST(req: NextRequest) {
   const { company, role, research, resumeHtml } = await req.json();
   if (!company || !role) return NextResponse.json({ error: 'company and role required' }, { status: 400 });
 
-  const resumeText = stripHtml(resumeHtml ?? '');
+  const resumeText = stripHtml(compressHtml(resumeHtml ?? ''));
 
   const letterBody = await groqFast(
     `You are a professional cover letter writer. Write a compelling, natural cover letter in first person for the candidate below.

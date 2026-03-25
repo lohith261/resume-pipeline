@@ -1,4 +1,4 @@
-import { groq, groqFast } from './groq';
+import { groqFast, groqLarge, compressHtml } from './groq';
 import fs from 'fs';
 import path from 'path';
 
@@ -132,7 +132,7 @@ export async function tailorHtml(
 ): Promise<string> {
   if (!missing.length) return baseHtml;
 
-  const tailored = await groqFast(
+  const tailored = await groqLarge(
     'You are a professional resume tailoring assistant. Return ONLY the complete HTML — no explanation, no markdown fences.',
     `You are tailoring an HTML resume for a job application.
 
@@ -144,16 +144,16 @@ ${isSecondPass ? '⚠️ SECOND PASS — these keywords were STILL MISSING after
 ${missing.slice(0, 40).map(k => `• "${k}"`).join('\n')}
 
 CRITICAL RULES:
-- Each keyword phrase above MUST appear verbatim (exact spelling, exact capitalisation) somewhere in the resume
-- Weave them naturally into existing bullet points — do not keyword-stuff
-- If a keyword truly cannot fit an existing bullet, add a new concise bullet (max 1–2 additions)
-- Page 1 is space-constrained — if you add text, shorten another bullet to compensate
-- NEVER fabricate experience — only enhance what already exists
-- Write natural human English
-- Do NOT change HTML structure, CSS, or section headings
-- Return the COMPLETE modified HTML — nothing else
+1. Each keyword phrase above MUST appear verbatim (exact spelling, exact capitalisation) somewhere in the resume
+2. Weave keywords naturally into EXISTING bullet points by editing them — this is strongly preferred
+3. ⛔ HARD LIMIT: Add AT MOST 2 new <li> bullet points to the ENTIRE resume across all sections combined. No more.
+4. Page 1 is space-constrained — if you add any text, shorten another bullet to compensate
+5. NEVER fabricate experience — only enhance what already exists
+6. Write natural human English — no buzzword soup
+7. Do NOT change HTML structure, CSS, or section headings
+8. Return the COMPLETE modified HTML — nothing else
 
-${baseHtml}`,
+${compressHtml(baseHtml)}`,
     6000,
   );
 
