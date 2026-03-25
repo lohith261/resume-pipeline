@@ -27,16 +27,18 @@ interface TailorResult {
 }
 
 type Message =
-  | { type: 'user';     text: string }
-  | { type: 'thinking'; steps: Step[] }
-  | { type: 'result';   result: TailorResult }
-  | { type: 'answer';   text: string }
-  | { type: 'edited';   summary: string }
-  | { type: 'error';    text: string };
+  | { type: 'user';         text: string }
+  | { type: 'thinking';     steps: Step[] }
+  | { type: 'result';       result: TailorResult }
+  | { type: 'answer';       text: string }
+  | { type: 'edited';       summary: string }
+  | { type: 'cover-letter'; company: string; role: string }
+  | { type: 'error';        text: string };
 
 /* ─── Helpers ────────────────────────────────────────────────────────────── */
 const isUrl = (s: string) => /^https?:\/\//i.test(s.trim());
 const isEditIntent = (s: string) => /^(add|remove|delete|change|update|edit|replace|rewrite|shorten|expand|modify|fix|move|insert|take out|get rid|put |make |can you (add|remove|change|fix|update|rewrite)|please (add|remove|change|fix)|include|exclude)/i.test(s.trim());
+const isCoverLetterRequest = (s: string) => /cover.?letter|covering letter|write.*letter.*for|generate.*cover/i.test(s);
 
 function CoverageBadge({ pct }: { pct: number }) {
   const color = pct >= 90 ? '#22c55e' : pct >= 70 ? '#f59e0b' : '#ef4444';
@@ -158,58 +160,82 @@ function ResultCard({ result, onView }: { result: TailorResult; onView: (r: Tail
   );
 }
 
-function PreviewPanel({ result, onClose }: { result: TailorResult; onClose: () => void }) {
-  const iframeRef = useRef<HTMLIFrameElement>(null);
-  const src = `data:text/html;charset=utf-8,${encodeURIComponent(result.html)}`;
+function PreviewPanel({ result, coverLetterHtml, initialTab = 'resume', onClose }: {
+  result: TailorResult;
+  coverLetterHtml: string | null;
+  initialTab?: 'resume' | 'cover';
+  onClose: () => void;
+}) {
+  const [tab, setTab] = useState<'resume' | 'cover'>(initialTab);
+  const activeHtml = tab === 'cover' && coverLetterHtml ? coverLetterHtml : result.html;
+
+  // Sync to cover tab when a new cover letter arrives
+  useEffect(() => { if (initialTab === 'cover') setTab('cover'); }, [initialTab]);
 
   function handleDownload() {
     const win = window.open('', '_blank');
     if (!win) { alert('Allow pop-ups to download PDF'); return; }
-    const slug = `Resume_${result.company}_${result.role}`.replace(/[^a-zA-Z0-9]+/g, '_').replace(/^_|_$/g, '');
+    const base = tab === 'cover'
+      ? `Cover_Letter_${result.company}_${result.role}`
+      : `Resume_${result.company}_${result.role}`;
+    const slug = base.replace(/[^a-zA-Z0-9]+/g, '_').replace(/^_|_$/g, '');
     win.document.open();
-    win.document.write(result.html.replace(/<title>[^<]*<\/title>/, `<title>${slug}</title>`));
+    win.document.write(activeHtml.replace(/<title>[^<]*<\/title>/, `<title>${slug}</title>`));
     win.document.close();
     win.addEventListener('load', () => { win.focus(); win.print(); }, { once: true });
   }
 
+  const isResume = tab === 'resume';
+
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
+      {/* Top bar */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 20px', borderBottom: '1px solid #222', background: '#161616', flexShrink: 0 }}>
         <div>
           <div style={{ fontWeight: 600, fontSize: 14 }}>{result.company} — {result.role}</div>
           <div style={{ fontSize: 12, color: '#666', marginTop: 2 }}>
-            Coverage: <CoverageBadge pct={result.after.pct} /> &nbsp;·&nbsp; {result.after.covered.length}/{result.after.total} keywords
+            {isResume
+              ? <>Coverage: <CoverageBadge pct={result.after.pct} /> &nbsp;·&nbsp; {result.after.covered.length}/{result.after.total} keywords</>
+              : <span style={{ color: '#a0b4ff' }}>Cover Letter</span>}
           </div>
         </div>
-        <div style={{ display: 'flex', gap: 8 }}>
-          <button
-            onClick={handleDownload}
-            style={{ background: '#6366f1', color: '#fff', border: 'none', borderRadius: 8, padding: '7px 14px', fontSize: 13, fontWeight: 500, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6 }}
-          >
+        <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+          {/* Tabs */}
+          {coverLetterHtml && (
+            <div style={{ display: 'flex', gap: 2, background: '#1a1a1a', borderRadius: 7, padding: 3 }}>
+              {(['resume', 'cover'] as const).map(t => (
+                <button key={t} onClick={() => setTab(t)} style={{ background: tab === t ? '#6366f1' : 'transparent', color: tab === t ? '#fff' : '#666', border: 'none', borderRadius: 5, padding: '4px 10px', fontSize: 11, fontWeight: 500, cursor: 'pointer' }}>
+                  {t === 'resume' ? '📄 Resume' : '✉️ Cover Letter'}
+                </button>
+              ))}
+            </div>
+          )}
+          <button onClick={handleDownload} style={{ background: '#6366f1', color: '#fff', border: 'none', borderRadius: 8, padding: '7px 14px', fontSize: 13, fontWeight: 500, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6 }}>
             <Download size={13} /> Download PDF
           </button>
-          <button
-            onClick={onClose}
-            style={{ background: '#222', color: '#888', border: 'none', borderRadius: 8, padding: '7px 12px', fontSize: 13, cursor: 'pointer' }}
-          >✕</button>
+          <button onClick={onClose} style={{ background: '#222', color: '#888', border: 'none', borderRadius: 8, padding: '7px 12px', fontSize: 13, cursor: 'pointer' }}>✕</button>
         </div>
       </div>
+
+      {/* Iframe */}
       <div style={{ flex: 1, overflowY: 'auto', background: '#444', display: 'flex', justifyContent: 'center', padding: '24px 24px 48px' }}>
         <div style={{ position: 'relative', width: 794 }}>
           <iframe
-            ref={iframeRef}
-            src={src}
-            style={{ width: 794, height: 2246, border: 'none', boxShadow: '0 8px 40px rgba(0,0,0,0.6)', borderRadius: 2, display: 'block' }}
-            title="Resume Preview"
+            key={tab}
+            src={`data:text/html;charset=utf-8,${encodeURIComponent(activeHtml)}`}
+            style={{ width: 794, height: isResume ? 2246 : 1122, border: 'none', boxShadow: '0 8px 40px rgba(0,0,0,0.6)', borderRadius: 2, display: 'block' }}
+            title={isResume ? 'Resume Preview' : 'Cover Letter Preview'}
           />
-          {/* Page 1 / Page 2 break at 1123px */}
-          <div style={{ position: 'absolute', top: 1123, left: -32, right: -32, pointerEvents: 'none', zIndex: 10 }}>
-            <div style={{ height: 3, background: '#ef4444', opacity: 0.85 }} />
-            <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 4 }}>
-              <span style={{ background: '#ef4444', color: '#fff', fontSize: 10, fontWeight: 700, padding: '2px 8px', borderRadius: '0 0 4px 4px', letterSpacing: 0.5 }}>PAGE 1 END</span>
-              <span style={{ background: '#ef4444', color: '#fff', fontSize: 10, fontWeight: 700, padding: '2px 8px', borderRadius: '0 0 4px 4px', letterSpacing: 0.5 }}>PAGE 2 START</span>
+          {/* Page-break indicator — resume only */}
+          {isResume && (
+            <div style={{ position: 'absolute', top: 1123, left: -32, right: -32, pointerEvents: 'none', zIndex: 10 }}>
+              <div style={{ height: 3, background: '#ef4444', opacity: 0.85 }} />
+              <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 4 }}>
+                <span style={{ background: '#ef4444', color: '#fff', fontSize: 10, fontWeight: 700, padding: '2px 8px', borderRadius: '0 0 4px 4px', letterSpacing: 0.5 }}>PAGE 1 END</span>
+                <span style={{ background: '#ef4444', color: '#fff', fontSize: 10, fontWeight: 700, padding: '2px 8px', borderRadius: '0 0 4px 4px', letterSpacing: 0.5 }}>PAGE 2 START</span>
+              </div>
             </div>
-          </div>
+          )}
         </div>
       </div>
     </div>
@@ -218,12 +244,14 @@ function PreviewPanel({ result, onClose }: { result: TailorResult; onClose: () =
 
 /* ─── Main ───────────────────────────────────────────────────────────────── */
 export default function Home() {
-  const [messages, setMessages]       = useState<Message[]>([]);
-  const [input, setInput]             = useState('');
-  const [loading, setLoading]         = useState(false);
-  const [preview, setPreview]         = useState<TailorResult | null>(null);
-  const bottomRef                     = useRef<HTMLDivElement>(null);
-  const textareaRef                   = useRef<HTMLTextAreaElement>(null);
+  const [messages, setMessages]         = useState<Message[]>([]);
+  const [input, setInput]               = useState('');
+  const [loading, setLoading]           = useState(false);
+  const [preview, setPreview]           = useState<TailorResult | null>(null);
+  const [coverLetterHtml, setCoverLetterHtml] = useState<string | null>(null);
+  const [previewInitialTab, setPreviewInitialTab] = useState<'resume' | 'cover'>('resume');
+  const bottomRef                       = useRef<HTMLDivElement>(null);
+  const textareaRef                     = useRef<HTMLTextAreaElement>(null);
 
   useEffect(() => { bottomRef.current?.scrollIntoView({ behavior: 'smooth' }); }, [messages]);
 
@@ -252,6 +280,35 @@ export default function Home() {
 
     // Find the most recent result for context
     const activeResult = preview ?? (messages.slice().reverse().find(m => m.type === 'result') as { type: 'result'; result: TailorResult } | undefined)?.result;
+
+    // Cover letter mode
+    if (activeResult && !isUrl(text) && text.length < 600 && isCoverLetterRequest(text)) {
+      try {
+        setMessages(prev => prev.map((m, i) => i === thinkingIdx && m.type === 'thinking'
+          ? { ...m, steps: [{ id: 'cover', message: `Writing cover letter for ${activeResult.company}...`, done: false }] } : m));
+        const r = await fetch('/api/cover-letter', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            company: activeResult.company,
+            role: activeResult.role,
+            research: activeResult.research ?? '',
+            resumeHtml: activeResult.html,
+          }),
+        });
+        const d = await r.json();
+        if (d.error) throw new Error(d.error);
+        setCoverLetterHtml(d.html);
+        setPreviewInitialTab('cover');
+        setPreview(prev => prev); // keep preview open
+        setMessages(prev => prev.map((m, i) => i === thinkingIdx
+          ? { type: 'cover-letter' as const, company: activeResult.company, role: activeResult.role } : m));
+      } catch (e) {
+        setMessages(prev => prev.map((m, i) => i === thinkingIdx ? { type: 'error' as const, text: String(e) } : m));
+      }
+      setLoading(false);
+      return;
+    }
 
     // Edit mode: instruction to modify the resume
     if (activeResult && !isUrl(text) && text.length < 600 && isEditIntent(text)) {
@@ -428,6 +485,21 @@ export default function Home() {
                   </div>
                 </div>
               )}
+              {m.type === 'cover-letter' && (
+                <div style={{ display: 'flex', gap: 9 }}>
+                  <div style={{ width: 26, height: 26, borderRadius: '50%', background: '#1a1a2e', border: '1px solid #252540', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, flexShrink: 0, marginTop: 1 }}>✦</div>
+                  <div style={{ background: '#0d1020', border: '1px solid #1e2040', borderRadius: '3px 12px 12px 12px', padding: '12px 15px', fontSize: 13, color: '#a0b4ff' }}>
+                    <div style={{ fontWeight: 600, marginBottom: 6 }}>✉️ Cover letter ready!</div>
+                    <div style={{ color: '#666', fontSize: 12, marginBottom: 10 }}>{m.company} — {m.role}</div>
+                    <button
+                      onClick={() => setPreviewInitialTab('cover')}
+                      style={{ background: '#6366f1', color: '#fff', border: 'none', borderRadius: 7, padding: '6px 12px', fontSize: 12, cursor: 'pointer' }}
+                    >
+                      View in preview →
+                    </button>
+                  </div>
+                </div>
+              )}
               {m.type === 'error' && (
                 <div style={{ display: 'flex', gap: 9 }}>
                   <div style={{ width: 26, height: 26, borderRadius: '50%', background: '#2a1212', border: '1px solid #3d1a1a', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
@@ -471,7 +543,12 @@ export default function Home() {
       {/* Preview */}
       {showSplit && preview && (
         <div style={{ flex: 1, overflow: 'hidden' }}>
-          <PreviewPanel result={preview} onClose={() => setPreview(null)} />
+          <PreviewPanel
+            result={preview}
+            coverLetterHtml={coverLetterHtml}
+            initialTab={previewInitialTab}
+            onClose={() => { setPreview(null); setCoverLetterHtml(null); setPreviewInitialTab('resume'); }}
+          />
         </div>
       )}
     </div>
