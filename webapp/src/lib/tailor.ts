@@ -144,20 +144,25 @@ ${isSecondPass ? '⚠️ SECOND PASS — these keywords were STILL MISSING after
 ${missing.slice(0, 40).map(k => `• "${k}"`).join('\n')}
 
 CRITICAL RULES:
-1. Each keyword phrase above MUST appear verbatim (exact spelling, exact capitalisation) somewhere in the resume
-2. Weave keywords naturally into EXISTING bullet points by editing them — this is strongly preferred
-3. ⛔ HARD LIMIT: Add AT MOST 2 new <li> bullet points to the ENTIRE resume across all sections combined. No more.
+1. Weave keywords naturally into EXISTING bullet points by editing them — always prefer this
+2. If a keyword truly cannot fit any existing bullet naturally, SKIP IT — do not create a keyword-dump bullet
+3. ⛔ HARD LIMIT: Add AT MOST 1 new <li> bullet point to the ENTIRE resume. Only if there is genuine experience behind it.
 4. Page 1 is space-constrained — if you add any text, shorten another bullet to compensate
 5. NEVER fabricate experience — only enhance what already exists
-6. Write natural human English — no buzzword soup
-7. Do NOT change HTML structure, CSS, or section headings
-8. Return the COMPLETE modified HTML — nothing else
+6. Write natural human English — each bullet should read like a real sentence, not a keyword list
+7. ⛔ Do NOT wrap keywords in <strong> or <b> tags — no bolding of any words
+8. Do NOT change HTML structure, CSS, or section headings
+9. Return the COMPLETE modified HTML — nothing else
 
 ${compressHtml(baseHtml)}`,
     6000,
   );
 
-  return tailored.replace(/^```(?:html)?\s*/m, '').replace(/\s*```$/m, '').trim();
+  return tailored
+    .replace(/^```(?:html)?\s*/m, '').replace(/\s*```$/m, '').trim()
+    // Strip any <strong>/<b> tags the LLM added around keywords
+    .replace(/<strong>([\s\S]*?)<\/strong>/gi, '$1')
+    .replace(/<b>([\s\S]*?)<\/b>/gi, '$1');
 }
 
 export async function runPipeline(

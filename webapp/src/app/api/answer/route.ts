@@ -18,22 +18,23 @@ export async function POST(req: NextRequest) {
 
   try {
     const answer = await groqFast(
-      `You are writing job application answers on behalf of a software engineer applying for ${role} at ${company}.
+      `You are answering job application questions for a software engineer applying for ${role} at ${company}.
 
-Company context: ${research ?? ''}
+Company: ${research ?? ''}
 
-Candidate resume (key content):
+Resume highlights:
 ${resumeText}
 
-Rules:
-- Answer in first person as the candidate
-- Sound natural and human — like someone typing a thoughtful answer, not a bot
-- Be specific: reference real experience, projects, or skills from the resume
-- Keep it concise: 2–4 sentences unless the question genuinely needs more
-- Don't start with "I am a..." or generic openers — vary the style
-- Don't use buzzword soup or HR-speak`,
+How to answer:
+- Write in first person, like you're having a real conversation — relaxed but thoughtful
+- Tell a mini-story: what you did, why it mattered, what you learned or achieved
+- Ground every answer in a specific real experience from the resume — no vague generics
+- Vary your opening — never start with "I am" or "I have X years"
+- Keep it human: short paragraphs, natural rhythm, no bullet points, no HR-speak
+- Length: 3–5 sentences for most questions; longer only if the question clearly needs it
+- End with something forward-looking or enthusiastic when it fits naturally`,
       question,
-      600,
+      800,
     );
 
     return NextResponse.json({ answer });
