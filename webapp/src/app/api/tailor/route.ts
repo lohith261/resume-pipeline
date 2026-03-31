@@ -35,7 +35,14 @@ export async function POST(req: NextRequest) {
         const result = await runPipeline(jd, company, role, (step, data) => {
           const d = data as Record<string, unknown> | undefined;
           let message = step;
-          if (step === 'extracting')      message = 'Extracting ATS keywords from JD...';
+          if (step === 'classifying')     message = 'Detecting role type...';
+          else if (step === 'classified') {
+            const typeLabel: Record<string, string> = { ai_engineer: 'AI Engineer', data_analyst: 'Data Analyst', hybrid: 'Hybrid' };
+            const label = typeLabel[(d?.type as string) ?? 'hybrid'] ?? 'Hybrid';
+            const pct   = Math.round(((d?.confidence as number) ?? 0.7) * 100);
+            message = `${label} role (${pct}% confidence) — using ${label} base`;
+          }
+          else if (step === 'extracting')      message = 'Extracting ATS keywords from JD...';
           else if (step === 'keywords')   message = `Found ${d?.count ?? '?'} keywords`;
           else if (step === 'coverage_before') message = `Baseline coverage: ${d?.pct ?? '?'}%`;
           else if (step === 'researching') message = `Researching ${company}...`;
@@ -69,12 +76,13 @@ export async function POST(req: NextRequest) {
           company:  result.company,
           role:     result.role,
           htmlUrl,
-          html:     result.html,
-          before:   result.before,
-          after:    result.after,
-          keywords: result.keywords,
-          research: result.research,
-          changes:  result.changes,
+          html:           result.html,
+          before:         result.before,
+          after:          result.after,
+          keywords:       result.keywords,
+          research:       result.research,
+          changes:        result.changes,
+          classification: result.classification,
           slug,
         });
       } catch (e: unknown) {

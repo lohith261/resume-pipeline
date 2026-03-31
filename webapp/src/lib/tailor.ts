@@ -24,6 +24,7 @@ export interface TailorResult {
   role: string;
   research: string;
   changes: BulletChange[];
+  classification: Classification;
 }
 
 /** Extract plain-text content of every <li> in an HTML string */
@@ -70,9 +71,50 @@ function slugify(text: string) {
   return text.toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_|_$/, '');
 }
 
-export function getBaseHtml(): string {
-  const p = path.join(process.cwd(), 'src', 'data', 'resume_base.html');
+export type ResumeType = 'ai_engineer' | 'data_analyst' | 'hybrid';
+
+export interface Classification {
+  type: ResumeType;
+  confidence: number;
+  reasoning: string;
+}
+
+const RESUME_FILES: Record<ResumeType, string> = {
+  ai_engineer:  'resume_ai_engineer.html',
+  data_analyst: 'resume_data_analyst.html',
+  hybrid:       'resume_base.html',
+};
+
+export function getBaseHtml(type: ResumeType = 'hybrid'): string {
+  const file = RESUME_FILES[type] ?? RESUME_FILES.hybrid;
+  const p = path.join(process.cwd(), 'src', 'data', file);
+  // Fall back to hybrid if specific file doesn't exist
+  if (!fs.existsSync(p)) return fs.readFileSync(path.join(process.cwd(), 'src', 'data', 'resume_base.html'), 'utf8');
   return fs.readFileSync(p, 'utf8');
+}
+
+export async function classifyJd(jd: string): Promise<Classification> {
+  const res = await groqFast(
+    `Classify this job description into exactly one of:
+- "ai_engineer"  → primary focus on LLMs, RAG, LangChain, agents, GenAI, prompt engineering, inference
+- "data_analyst" → primary focus on SQL, Tableau, analytics, dashboards, BI, ETL, statistics, Python data science
+- "hybrid"       → requires both AI engineering AND strong data/analytics skills equally
+
+Return ONLY valid JSON (no markdown, no explanation):
+{"type":"ai_engineer|data_analyst|hybrid","confidence":0.0-1.0,"reasoning":"one sentence"}`,
+    jd.slice(0, 3000),
+    300,
+  );
+  try {
+    const clean = res.replace(/```(?:json)?|```/g, '').trim();
+    const parsed = JSON.parse(clean);
+    const type = (['ai_engineer', 'data_analyst', 'hybrid'] as ResumeType[]).includes(parsed.type)
+      ? parsed.type as ResumeType
+      : 'hybrid';
+    return { type, confidence: parsed.confidence ?? 0.7, reasoning: parsed.reasoning ?? '' };
+  } catch {
+    return { type: 'hybrid', confidence: 0.5, reasoning: 'classification parse error — using hybrid' };
+  }
 }
 
 export function scoreCoverage(keywords: string[], html: string): CoverageResult {
@@ -171,11 +213,15 @@ export async function runPipeline(
   role: string,
   onStep: (step: string, data?: unknown) => void,
 ): Promise<TailorResult> {
+  onStep('classifying');
+  const classification = await classifyJd(jd);
+  onStep('classified', classification);
+
   onStep('extracting');
   const keywords = await extractKeywords(jd);
   onStep('keywords', { count: keywords.length, keywords });
 
-  const baseHtml = getBaseHtml();
+  const baseHtml = getBaseHtml(classification.type);
   const before = scoreCoverage(keywords, baseHtml);
   onStep('coverage_before', { pct: before.pct, missing: before.missing.length });
 
@@ -205,7 +251,7 @@ export async function runPipeline(
   }
 
   const changes = computeChanges(baseHtml, html);
-  return { html, before, after, keywords, company, role, research, changes };
+  return { html, before, after, keywords, company, role, research, changes, classification };
 }
 
 export { slugify };

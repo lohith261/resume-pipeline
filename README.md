@@ -14,19 +14,35 @@ An AI-powered resume tailoring system built for **Bandreddy Sri Sai Lohith**. Pa
 ## How It Works
 
 ```
-JD text input
+JD text / URL input
     │
-    ├─► [Groq] Extract ATS keywords from JD
+    ├─► [Groq] Classify role type → ai_engineer | data_analyst | hybrid
+    │         └─► Select matching base resume (87%+ starting coverage)
+    │
+    ├─► [Groq] Extract ATS technical keywords from JD
+    ├─► Score baseline keyword coverage against selected base
     ├─► [Groq] Research company + role context
-    ├─► Score keyword coverage against resume_base.html
     │
-    ├─ Coverage < 90%? ──► [Groq] Rewrite bullets, weave in missing keywords
-    │                           (edit first, add only if >10% still missing)
+    ├─ Coverage < 90%? ──► [Groq] Pass 1: Weave keywords into existing bullets
+    │                 └──► Still < 90%? Pass 2: Target remaining missing keywords
     │
+    ├─► Compute bullet diff (modified vs added vs unchanged)
     ├─► Write → tailored/<company>/resume_<company>_<role>.html
-    ├─► Puppeteer → tailored/<company>/resume_<company>_<role>.pdf
-    └─► SSE broadcast → auto-reload browser preview
+    ├─► PDF → browser window.print() (web) / Puppeteer (CLI)
+    └─► SSE broadcast → live progress in chat UI
 ```
+
+### Multi-Base Resume System
+
+Three specialized bases, auto-selected per JD:
+
+| Base | File | Best for |
+|---|---|---|
+| AI Engineer | `resume_ai_engineer.html` | LLMs, RAG, LangChain, agents, GenAI, inference |
+| Data Analyst | `resume_data_analyst.html` | SQL, ETL, dashboards, BI, Python analytics |
+| Hybrid | `resume_base.html` | Full-stack, balanced AI + data roles |
+
+The classifier (`classify_jd.py` / `classifyJd()`) first runs a fast keyword heuristic. If ambiguous, it calls Groq to classify. The UI shows which base was selected and confidence %, with a one-sentence reasoning.
 
 ---
 
@@ -97,11 +113,15 @@ Every tailoring run computes a word-level diff between the base resume and the t
 ```
 resume-pipeline/
 │
-├── resume_base.html              # Master resume — the single source of truth
+├── resume_ai_engineer.html       # AI/LLM-focused base (RAG, LangChain, agents, GenAI)
+├── resume_data_analyst.html      # Analytics-focused base (SQL, ETL, dashboards, Python)
+├── resume_base.html              # Hybrid base — balanced AI + data (also resume_hybrid.html)
 │                                 # ATS-clean, 2-page, pure HTML/CSS, no tables/columns
 │                                 # All tailored resumes are generated from this file
 │
-├── tailor_resume.py              # Core AI pipeline (356 lines)
+├── classify_jd.py                # JD classifier → ai_engineer | data_analyst | hybrid
+│                                 # Fast keyword heuristic first; Groq LLM for ambiguous cases
+├── tailor_resume.py              # Core AI pipeline
 │                                 # Calls Groq API → keyword extract → company research
 │                                 # → coverage score → bullet rewrite → HTML + PDF output
 │                                 # Auto-falls back to OpenRouter if Groq hits rate limit

@@ -41,10 +41,22 @@ OPENROUTER_URL   = "https://openrouter.ai/api/v1/chat/completions"
 OPENROUTER_MODEL = "google/gemini-2.5-flash"
 
 BASE_DIR   = Path(__file__).parent
-BASE_HTML  = BASE_DIR / "resume_base.html"
 PDF_GEN    = BASE_DIR / "generate_pdf.js"
 OUTPUT_DIR = BASE_DIR / "tailored"
 OUTPUT_DIR.mkdir(exist_ok=True)
+
+# Base resume paths — selected by classifier
+BASE_RESUMES = {
+    "ai_engineer":  BASE_DIR / "resume_ai_engineer.html",
+    "data_analyst": BASE_DIR / "resume_data_analyst.html",
+    "hybrid":       BASE_DIR / "resume_base.html",
+}
+# Fallback to hybrid if a variant file doesn't exist yet
+def get_base_html(classification: str) -> tuple[str, Path]:
+    path = BASE_RESUMES.get(classification, BASE_RESUMES["hybrid"])
+    if not path.exists():
+        path = BASE_RESUMES["hybrid"]
+    return path.read_text(encoding="utf-8"), path
 
 
 # ── Grok API call ────────────────────────────────────────────────────────────
@@ -288,8 +300,17 @@ def main():
 
     jd = Path(jd_input).read_text(encoding="utf-8") if os.path.isfile(jd_input) else jd_input
 
-    # ── 1. Read base resume
-    base_html = read_base_html()
+    # ── 0. Classify JD → select best base resume
+    from classify_jd import classify_jd
+    classification = classify_jd(jd)
+    cls   = classification["classification"]
+    conf  = classification["confidence"]
+    print(f"[classify] Role type: {cls} (confidence {conf:.0%})")
+    print(f"[classify] Reasoning: {classification['reasoning']}")
+
+    # ── 1. Read matching base resume
+    base_html, base_path = get_base_html(cls)
+    print(f"[classify] Using base: {base_path.name}")
 
     # ── 2. Extract keywords via Grok
     keywords = extract_keywords_grok(jd)

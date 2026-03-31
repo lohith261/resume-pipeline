@@ -17,6 +17,11 @@ interface BulletChange {
   after: string;
 }
 
+type ResumeType = 'ai_engineer' | 'data_analyst' | 'hybrid';
+interface Classification { type: ResumeType; confidence: number; reasoning: string; }
+const BASE_LABELS: Record<ResumeType, string> = { ai_engineer: 'AI Engineer', data_analyst: 'Data Analyst', hybrid: 'Hybrid' };
+const BASE_COLORS: Record<ResumeType, string> = { ai_engineer: '#6366f1', data_analyst: '#0ea5e9', hybrid: '#10b981' };
+
 interface TailorResult {
   company: string; role: string;
   html: string; htmlUrl: string;
@@ -24,6 +29,7 @@ interface TailorResult {
   keywords: string[]; slug: string;
   research?: string;
   changes?: BulletChange[];
+  classification?: Classification;
 }
 
 type Message =
@@ -80,6 +86,14 @@ function ResultCard({ result, onView }: { result: TailorResult; onView: (r: Tail
         <div>
           <div style={{ fontWeight: 600, fontSize: 14 }}>{result.company}</div>
           <div style={{ color: '#888', fontSize: 12, marginTop: 2 }}>{result.role}</div>
+          {result.classification && (
+            <div style={{ marginTop: 5, display: 'flex', alignItems: 'center', gap: 6 }}>
+              <span style={{ background: BASE_COLORS[result.classification.type], color: '#fff', fontSize: 10, fontWeight: 600, padding: '2px 8px', borderRadius: 20 }}>
+                {BASE_LABELS[result.classification.type]} base
+              </span>
+              <span style={{ color: '#555', fontSize: 10 }}>{Math.round(result.classification.confidence * 100)}% confidence</span>
+            </div>
+          )}
         </div>
         <div style={{ textAlign: 'right' }}>
           <div style={{ fontSize: 11, color: '#666', marginBottom: 2 }}>Coverage</div>
