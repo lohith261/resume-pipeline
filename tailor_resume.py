@@ -175,6 +175,26 @@ def generate_pdf(html_path: Path) -> Path:
     return pdf_path
 
 
+def write_ats_checklist(out_dir: Path, company: str, role: str) -> Path:
+    checklist = f"""ATS SCAN CHECKLIST
+==================
+Company: {company}
+Role   : {role}
+
+1) Upload the generated PDF to an ATS scanner (e.g., ResumeWorded or Jobscan).
+2) Record the overall ATS score and any missing keywords.
+3) If score is below target, re-run tailor_resume.py and re-scan.
+
+Notes:
+- Use the exact JD for scanning.
+- Prefer the tailored PDF in this folder.
+"""
+    out_path = out_dir / "ats_checklist.txt"
+    out_path.write_text(checklist, encoding="utf-8")
+    print(f"[tailor] ATS checklist → {out_path}")
+    return out_path
+
+
 # ── Step 1: Grok extracts keywords from JD ──────────────────────────────────
 
 def extract_keywords_grok(jd: str) -> list[str]:
@@ -183,6 +203,8 @@ def extract_keywords_grok(jd: str) -> list[str]:
         system = (
             "You are an ATS keyword extraction engine. "
             "Extract ALL important keywords and phrases from the job description. "
+            "CRITICAL: return phrases EXACTLY as they appear in the JD (verbatim, same wording). "
+            "Do NOT paraphrase or normalize. "
             "Focus on: technical skills, tools, frameworks, methodologies, domain terms. "
             "Return ONLY a JSON array of strings. No explanation. No markdown."
         ),
@@ -267,6 +289,7 @@ Rules:
 - NEVER fabricate experience or projects — only enhance what already exists
 - Write in natural human English — no buzzword soup, no robotic lists
 - Keep every sentence concise (max 1.5 lines per bullet ideally)
+- Use the EXACT JD wording for any inserted keywords or phrases; do not paraphrase them.
 - Do NOT change the HTML structure, CSS, or any section headings
 - Return the COMPLETE modified HTML — nothing else
 
@@ -365,12 +388,16 @@ def main():
     out_html = write_tailored_html(company, role, tailored_html)
     generate_pdf(out_html)
 
+    # ── 9. ATS scan checklist (manual external scan)
+    write_ats_checklist(report_path.parent, company, role)
+
     slug    = f"{slugify(company)}_{slugify(role)}"
     comp_slug = slugify(company)
     preview = f"http://localhost:3000/preview/tailored/{comp_slug}/resume_{slug}"
     print(f"\n✅ Done!")
     print(f"   Preview : {preview}")
-    print(f"   Coverage: {report_after['pct_covered']}%\n")
+    print(f"   Coverage: {report_after['pct_covered']}%")
+    print(f"   ATS     : Run external ATS scan using the checklist in {report_path.parent}\n")
 
 
 if __name__ == "__main__":
