@@ -313,6 +313,7 @@ node generate_pdf.js resume_base.html resume_base.pdf
 | 8 | Save JSON report → `tailored/<company>/report_<co>_<role>.json` |
 | 9 | Write HTML → `tailored/<company>/resume_<co>_<role>.html` |
 | 10 | Spawn `node generate_pdf.js` subprocess → PDF |
+| 11 | Write ATS scan checklist → `tailored/<company>/ats_checklist.txt` |
 
 **Rate limit handling:** If Groq returns HTTP 429, the pipeline waits 3s, retries once, then automatically falls back to OpenRouter (`google/gemini-2.0-flash-001`) with no user intervention needed.
 
@@ -329,7 +330,8 @@ When the AI edits resume bullets, it follows these strict constraints:
 5. **Human English only** — no buzzword stacking, no robotic keyword lists
 6. **Max ~1.5 lines per bullet** — keep concise
 7. **Do not touch** HTML structure, CSS, section headings, or contact info
-8. **Return complete HTML** — not a diff, not a snippet, no markdown fences
+8. **Use exact JD phrasing** — insert keywords verbatim (no paraphrases)
+9. **Return complete HTML** — not a diff, not a snippet, no markdown fences
 
 ---
 
@@ -339,7 +341,7 @@ When the AI edits resume bullets, it follows these strict constraints:
 - **Page 1:** Header, Summary, Experience, Projects
 - **Page 2:** Skills, Education, Awards & Honors
 - **`page-break-inside: avoid` is set only on `.project-block` and `.job`**, NOT on `.section`. Setting it on entire sections causes Chromium to push the whole section to the next page when it doesn't fully fit, creating a 3rd page.
-- **Spacing is tuned precisely** — `section margin-bottom: 18px`, `project-block: 13px`, `li: 5px`, `line-height: 1.44`. These values leave ≤ 30px gap at the bottom of page 1 and prevent overflow into a 3rd page.
+- **Spacing is tuned precisely** — `section margin-bottom: 12px`, `project-block: 8px`, `li: 1px`, `line-height: 1.42`. These values leave ≤ 30px gap at the bottom of page 1 and prevent overflow into a 3rd page.
 
 ---
 
@@ -350,6 +352,7 @@ When the AI edits resume bullets, it follows these strict constraints:
 | `tailored/<co>/resume_<co>_<role>.html` | ✅ Yes |
 | `tailored/<co>/resume_<co>_<role>.pdf` | ❌ No (binary, gitignored) |
 | `tailored/<co>/report_<co>_<role>.json` | ❌ No (contains full JD text) |
+| `tailored/<co>/ats_checklist.txt` | ✅ Yes |
 | `resume_base.html` | ✅ Yes |
 | `resume_base.pdf` | ❌ No |
 
