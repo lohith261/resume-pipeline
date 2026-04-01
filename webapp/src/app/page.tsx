@@ -186,17 +186,32 @@ function PreviewPanel({ result, coverLetterHtml, initialTab = 'resume', onClose 
   // Sync to cover tab when a new cover letter arrives
   useEffect(() => { if (initialTab === 'cover') setTab('cover'); }, [initialTab]);
 
-  function handleDownload() {
-    const win = window.open('', '_blank');
-    if (!win) { alert('Allow pop-ups to download PDF'); return; }
+  function getSlug() {
     const base = tab === 'cover'
       ? `Cover_Letter_${result.company}_${result.role}`
       : `Resume_${result.company}_${result.role}`;
-    const slug = base.replace(/[^a-zA-Z0-9]+/g, '_').replace(/^_|_$/g, '');
+    return base.replace(/[^a-zA-Z0-9]+/g, '_').replace(/^_|_$/g, '');
+  }
+
+  function handleDownload() {
+    const win = window.open('', '_blank');
+    if (!win) { alert('Allow pop-ups to download PDF'); return; }
+    const slug = getSlug();
     win.document.open();
     win.document.write(activeHtml.replace(/<title>[^<]*<\/title>/, `<title>${slug}</title>`));
     win.document.close();
     win.addEventListener('load', () => { win.focus(); win.print(); }, { once: true });
+  }
+
+  function handleDownloadDocx() {
+    const slug = getSlug();
+    const blob = new Blob([activeHtml], { type: 'application/msword' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${slug}.doc`;
+    a.click();
+    URL.revokeObjectURL(url);
   }
 
   const isResume = tab === 'resume';
@@ -225,7 +240,10 @@ function PreviewPanel({ result, coverLetterHtml, initialTab = 'resume', onClose 
             </div>
           )}
           <button onClick={handleDownload} style={{ background: '#6366f1', color: '#fff', border: 'none', borderRadius: 8, padding: '7px 14px', fontSize: 13, fontWeight: 500, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6 }}>
-            <Download size={13} /> Download PDF
+            <Download size={13} /> PDF
+          </button>
+          <button onClick={handleDownloadDocx} style={{ background: '#1e293b', color: '#a0b4ff', border: '1px solid #334155', borderRadius: 8, padding: '7px 14px', fontSize: 13, fontWeight: 500, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6 }}>
+            <Download size={13} /> DOCX
           </button>
           <button onClick={onClose} style={{ background: '#222', color: '#888', border: 'none', borderRadius: 8, padding: '7px 12px', fontSize: 13, cursor: 'pointer' }}>✕</button>
         </div>
