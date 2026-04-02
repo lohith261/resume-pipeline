@@ -117,12 +117,39 @@ Return ONLY valid JSON (no markdown, no explanation):
   }
 }
 
+function kwMatches(kw: string, html: string): boolean {
+  // 1. Direct match
+  const escaped = kw.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  if (new RegExp(escaped, 'i').test(html)) return true;
+
+  // 2. Keyword contains an acronym in parentheses, e.g. "Retrieval-augmented generation (RAG)"
+  //    → check if the bare acronym appears in the HTML
+  const acronymInKw = kw.match(/\(([A-Z][A-Z0-9\-]{1,9})\)/);
+  if (acronymInKw) {
+    const acronym = acronymInKw[1];
+    if (new RegExp(`\\b${acronym}\\b`).test(html)) return true;
+    // Also try the expansion without the parenthetical part
+    const expansion = kw.replace(/\s*\([^)]*\)\s*/g, ' ').trim();
+    if (expansion && new RegExp(expansion.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'i').test(html)) return true;
+  }
+
+  // 3. Keyword is a bare acronym (e.g. "RAG") — check if the HTML has it as a word
+  if (/^[A-Z][A-Z0-9\-]{1,9}$/.test(kw.trim())) {
+    if (new RegExp(`\\b${kw.trim()}\\b`).test(html)) return true;
+  }
+
+  // 4. HTML has the acronym+expansion form, keyword is just the expansion
+  //    e.g. keyword = "Retrieval-Augmented Generation", resume has "RAG (Retrieval-Augmented Generation)"
+  //    Already covered by case 1 since the expansion words appear in the HTML.
+
+  return false;
+}
+
 export function scoreCoverage(keywords: string[], html: string): CoverageResult {
   const covered: string[] = [];
   const missing: string[] = [];
   for (const kw of keywords) {
-    const regex = new RegExp(kw.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'i');
-    (regex.test(html) ? covered : missing).push(kw);
+    (kwMatches(kw, html) ? covered : missing).push(kw);
   }
   const pct = keywords.length ? Math.round((covered.length / keywords.length) * 1000) / 10 : 100;
   return { covered, missing, pct, total: keywords.length };
