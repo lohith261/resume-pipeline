@@ -117,32 +117,29 @@ Return ONLY valid JSON (no markdown, no explanation):
   }
 }
 
+/** Normalize a string into a set of meaningful word tokens */
+function tokenize(s: string): Set<string> {
+  return new Set(
+    s.toLowerCase()
+     .replace(/[()[\]]/g, ' ')   // strip brackets so "(RAG)" → "RAG"
+     .split(/\W+/)
+     .filter(w => w.length > 1), // drop single-char noise
+  );
+}
+
 function kwMatches(kw: string, html: string): boolean {
-  // 1. Direct match
-  const escaped = kw.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-  if (new RegExp(escaped, 'i').test(html)) return true;
+  // Fast path: direct substring match (handles the majority of cases instantly)
+  if (new RegExp(kw.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'i').test(html)) return true;
 
-  // 2. Keyword contains an acronym in parentheses, e.g. "Retrieval-augmented generation (RAG)"
-  //    → check if the bare acronym appears in the HTML
-  const acronymInKw = kw.match(/\(([A-Z][A-Z0-9\-]{1,9})\)/);
-  if (acronymInKw) {
-    const acronym = acronymInKw[1];
-    if (new RegExp(`\\b${acronym}\\b`).test(html)) return true;
-    // Also try the expansion without the parenthetical part
-    const expansion = kw.replace(/\s*\([^)]*\)\s*/g, ' ').trim();
-    if (expansion && new RegExp(expansion.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'i').test(html)) return true;
-  }
-
-  // 3. Keyword is a bare acronym (e.g. "RAG") — check if the HTML has it as a word
-  if (/^[A-Z][A-Z0-9\-]{1,9}$/.test(kw.trim())) {
-    if (new RegExp(`\\b${kw.trim()}\\b`).test(html)) return true;
-  }
-
-  // 4. HTML has the acronym+expansion form, keyword is just the expansion
-  //    e.g. keyword = "Retrieval-Augmented Generation", resume has "RAG (Retrieval-Augmented Generation)"
-  //    Already covered by case 1 since the expansion words appear in the HTML.
-
-  return false;
+  // Token overlap: if ≥60% of the keyword's tokens appear anywhere in the resume,
+  // count it as covered. Handles word-order differences, acronym/expansion pairs,
+  // and partial phrase matches without any extra API calls.
+  const kwTokens = tokenize(kw);
+  if (kwTokens.size === 0) return false;
+  const resumeTokens = tokenize(html);
+  let hits = 0;
+  kwTokens.forEach(t => { if (resumeTokens.has(t)) hits++; });
+  return hits / kwTokens.size >= 0.6;
 }
 
 export function scoreCoverage(keywords: string[], html: string): CoverageResult {
