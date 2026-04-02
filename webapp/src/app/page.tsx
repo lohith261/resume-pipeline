@@ -196,9 +196,22 @@ function PreviewPanel({ result, coverLetterHtml, initialTab = 'resume', onClose 
   function handleDownload() {
     const win = window.open('', '_blank');
     if (!win) { alert('Allow pop-ups to download PDF'); return; }
-    const slug = getSlug();
+
+    // Human-readable title → Chrome uses this as the suggested PDF filename
+    // and embeds it as the PDF document title metadata
+    const pdfTitle = tab === 'cover'
+      ? `Lohith – Cover Letter – ${result.company}`
+      : `Lohith – ${result.role} – ${result.company}`;
+
+    const printHtml = activeHtml
+      // Set readable title (becomes PDF filename suggestion + PDF title metadata)
+      .replace(/<title>[^<]*<\/title>/i, `<title>${pdfTitle}</title>`)
+      // Ensure author meta is present (some PDF tools / downstream processors read it)
+      .replace(/<meta name="author"[^>]*>/i, '')
+      .replace('</head>', '<meta name="author" content="Bandreddy Sri Sai Lohith" />\n</head>');
+
     win.document.open();
-    win.document.write(activeHtml.replace(/<title>[^<]*<\/title>/, `<title>${slug}</title>`));
+    win.document.write(printHtml);
     win.document.close();
     win.addEventListener('load', () => { win.focus(); win.print(); }, { once: true });
   }
