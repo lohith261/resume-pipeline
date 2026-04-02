@@ -214,6 +214,44 @@ function PreviewPanel({ result, coverLetterHtml, initialTab = 'resume', onClose 
     URL.revokeObjectURL(url);
   }
 
+  function handleDownloadTxt() {
+    const slug = getSlug();
+
+    // Parse HTML → clean plain text for ATS/Workday form parsing
+    const div = document.createElement('div');
+    div.innerHTML = activeHtml;
+
+    // Drop non-content tags
+    div.querySelectorAll('style, script, link, meta').forEach(el => el.remove());
+
+    // Prefix every list item with a bullet so Workday can recognise bullets
+    div.querySelectorAll('li').forEach(el => el.insertAdjacentText('afterbegin', '• '));
+
+    // Mount off-screen so innerText correctly resolves block/inline whitespace
+    const host = document.createElement('div');
+    host.style.cssText = 'position:fixed;left:-9999px;top:0;width:800px;white-space:pre-wrap';
+    host.innerHTML = div.innerHTML;
+    document.body.appendChild(host);
+    let text = host.innerText;
+    document.body.removeChild(host);
+
+    // Normalise whitespace
+    text = text
+      .replace(/[ \t]+/g, ' ')       // collapse inline spaces/tabs
+      .replace(/\n[ \t]+/g, '\n')     // strip leading spaces on each line
+      .replace(/[ \t]+\n/g, '\n')     // strip trailing spaces on each line
+      .replace(/\n{3,}/g, '\n\n')     // max one blank line between sections
+      .trim();
+
+    const blob = new Blob([text], { type: 'text/plain;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${slug}.txt`;
+    a.click();
+    URL.revokeObjectURL(url);
+  }
+
   const isResume = tab === 'resume';
 
   return (
@@ -244,6 +282,9 @@ function PreviewPanel({ result, coverLetterHtml, initialTab = 'resume', onClose 
           </button>
           <button onClick={handleDownloadDocx} style={{ background: '#1e293b', color: '#a0b4ff', border: '1px solid #334155', borderRadius: 8, padding: '7px 14px', fontSize: 13, fontWeight: 500, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6 }}>
             <Download size={13} /> DOCX
+          </button>
+          <button onClick={handleDownloadTxt} title="Plain text — best for Workday / ATS form parsing" style={{ background: '#1e293b', color: '#86efac', border: '1px solid #166534', borderRadius: 8, padding: '7px 14px', fontSize: 13, fontWeight: 500, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6 }}>
+            <Download size={13} /> TXT
           </button>
           <button onClick={onClose} style={{ background: '#222', color: '#888', border: 'none', borderRadius: 8, padding: '7px 12px', fontSize: 13, cursor: 'pointer' }}>✕</button>
         </div>
