@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { groqFast, compressHtml } from '@/lib/groq';
 
+export const maxDuration = 60;
+
 function stripHtml(html: string): string {
   return html
     .replace(/<style[\s\S]*?<\/style>/gi, '')

@@ -262,10 +262,17 @@ export async function runPipeline(
   onStep('classifying');
   const classification = await classifyJd(jd);
   onStep('classified', classification);
+  // confidence ≤ 0.5 means the LLM response failed to parse and we fell back to hybrid
+  if (classification.confidence <= 0.5) {
+    onStep('warn', { id: 'warn_classify', message: '⚠ Classification uncertain — using Hybrid base as fallback' });
+  }
 
   onStep('extracting');
   const keywords = await extractKeywords(jd);
   onStep('keywords', { count: keywords.length, keywords });
+  if (keywords.length === 0) {
+    onStep('warn', { id: 'warn_keywords', message: '⚠ No keywords extracted — JD may be too short or in an unexpected format' });
+  }
 
   const baseHtml = getBaseHtml(classification.type);
   const before = scoreCoverage(keywords, baseHtml);

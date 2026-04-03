@@ -50,6 +50,7 @@ export async function POST(req: NextRequest) {
           else if (step === 'tailoring')  message = `Weaving in ${d?.missing ?? '?'} missing keywords...`;
           else if (step === 'tailoring2') message = `2nd pass — ${d?.missing ?? '?'} keywords still missing, trying again...`;
           else if (step === 'tailored')   message = 'Tailoring complete';
+          else if (step === 'warn')       message = (d?.message as string) ?? '⚠ Warning';
           send('step', { id: step, message, data });
         });
 

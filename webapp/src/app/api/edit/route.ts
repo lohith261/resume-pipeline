@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { groqLarge, compressHtml } from '@/lib/groq';
 
+export const maxDuration = 60;
+
 export async function POST(req: NextRequest) {
   const { instruction, html } = await req.json();
   if (!instruction || !html) return NextResponse.json({ error: 'instruction and html required' }, { status: 400 });
