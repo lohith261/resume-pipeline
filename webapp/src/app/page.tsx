@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useRef, useEffect } from 'react';
-import { Send, Link, FileText, ChevronRight, Download, Loader2, CheckCircle, AlertCircle } from 'lucide-react';
+import { Send, Link, FileText, ChevronRight, Download, Loader2, CheckCircle, AlertCircle, Paperclip, Undo2 } from 'lucide-react';
 
 /* ─── Types ──────────────────────────────────────────────────────────────── */
 interface Step { id: string; message: string; done: boolean; }
@@ -174,11 +174,13 @@ function ResultCard({ result, onView }: { result: TailorResult; onView: (r: Tail
   );
 }
 
-function PreviewPanel({ result, coverLetterHtml, initialTab = 'resume', onClose }: {
+function PreviewPanel({ result, coverLetterHtml, initialTab = 'resume', onClose, onUndo, canUndo }: {
   result: TailorResult;
   coverLetterHtml: string | null;
   initialTab?: 'resume' | 'cover';
   onClose: () => void;
+  onUndo?: () => void;
+  canUndo?: boolean;
 }) {
   const [tab, setTab] = useState<'resume' | 'cover'>(initialTab);
   const activeHtml = tab === 'cover' && coverLetterHtml ? coverLetterHtml : result.html;
@@ -214,17 +216,6 @@ function PreviewPanel({ result, coverLetterHtml, initialTab = 'resume', onClose 
     win.document.write(printHtml);
     win.document.close();
     win.addEventListener('load', () => { win.focus(); win.print(); }, { once: true });
-  }
-
-  function handleDownloadDocx() {
-    const slug = getSlug();
-    const blob = new Blob([activeHtml], { type: 'application/msword' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `${slug}.doc`;
-    a.click();
-    URL.revokeObjectURL(url);
   }
 
   function handleDownloadTxt() {
@@ -290,11 +281,13 @@ function PreviewPanel({ result, coverLetterHtml, initialTab = 'resume', onClose 
               ))}
             </div>
           )}
+          {canUndo && (
+            <button onClick={onUndo} title="Undo last edit" style={{ background: '#1a1a1a', color: '#f59e0b', border: '1px solid #3a2a00', borderRadius: 8, padding: '7px 12px', fontSize: 13, fontWeight: 500, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6 }}>
+              <Undo2 size={13} /> Undo
+            </button>
+          )}
           <button onClick={handleDownload} style={{ background: '#6366f1', color: '#fff', border: 'none', borderRadius: 8, padding: '7px 14px', fontSize: 13, fontWeight: 500, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6 }}>
             <Download size={13} /> PDF
-          </button>
-          <button onClick={handleDownloadDocx} style={{ background: '#1e293b', color: '#a0b4ff', border: '1px solid #334155', borderRadius: 8, padding: '7px 14px', fontSize: 13, fontWeight: 500, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6 }}>
-            <Download size={13} /> DOCX
           </button>
           <button onClick={handleDownloadTxt} title="Plain text — best for Workday / ATS form parsing" style={{ background: '#1e293b', color: '#86efac', border: '1px solid #166534', borderRadius: 8, padding: '7px 14px', fontSize: 13, fontWeight: 500, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6 }}>
             <Download size={13} /> TXT
@@ -336,8 +329,10 @@ export default function Home() {
   const [preview, setPreview]           = useState<TailorResult | null>(null);
   const [coverLetterHtml, setCoverLetterHtml] = useState<string | null>(null);
   const [previewInitialTab, setPreviewInitialTab] = useState<'resume' | 'cover'>('resume');
+  const [htmlHistory, setHtmlHistory]   = useState<string[]>([]);
   const bottomRef                       = useRef<HTMLDivElement>(null);
   const textareaRef                     = useRef<HTMLTextAreaElement>(null);
+  const fileInputRef                    = useRef<HTMLInputElement>(null);
 
   useEffect(() => { bottomRef.current?.scrollIntoView({ behavior: 'smooth' }); }, [messages]);
 
@@ -408,6 +403,8 @@ export default function Home() {
         });
         const d = await r.json();
         if (d.error) throw new Error(d.error);
+        // Save snapshot to undo history before applying change
+        setHtmlHistory(prev => [...prev, activeResult.html]);
         const updatedResult = { ...activeResult, html: d.html };
         setPreview(updatedResult);
         // Also update the result card in messages so future edits use latest HTML
@@ -488,6 +485,7 @@ export default function Home() {
             setMessages(prev => prev.map((m, i) => i === thinkingIdx && m.type === 'thinking' ? { ...m, steps: m.steps.map(s => ({ ...s, done: true })) } : m));
             setMessages(prev => [...prev, { type: 'result', result: data as TailorResult }]);
             setPreview(data as TailorResult);
+            setHtmlHistory([]); // fresh tailor clears undo history
           }
           if (event === 'error') {
             setMessages(prev => prev.map((m, i) => i === thinkingIdx ? { type: 'error', text: data.message } : m));
@@ -498,6 +496,30 @@ export default function Home() {
       setMessages(prev => prev.map((m, i) => i === thinkingIdx ? { type: 'error', text: String(e) } : m));
     }
     setLoading(false);
+  }
+
+  function handleUndo() {
+    if (htmlHistory.length === 0 || !preview) return;
+    const previousHtml = htmlHistory[htmlHistory.length - 1];
+    setHtmlHistory(prev => prev.slice(0, -1));
+    const restored = { ...preview, html: previousHtml };
+    setPreview(restored);
+    setMessages(prev => prev.map(m =>
+      m.type === 'result' && m.result.company === preview.company && m.result.role === preview.role
+        ? { ...m, result: restored } : m
+    ));
+  }
+
+  function handleFileUpload(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = ev => {
+      const text = ev.target?.result as string;
+      if (text) setInput(text.slice(0, 8000)); // cap at 8K chars
+    };
+    reader.readAsText(file);
+    e.target.value = ''; // reset so same file can be re-selected
   }
 
   const showSplit = preview !== null;
@@ -603,16 +625,31 @@ export default function Home() {
 
         <div style={{ padding: '10px 16px 14px', borderTop: '1px solid #1a1a1a' }}>
           <div style={{ display: 'flex', gap: 8, background: '#161616', border: '1px solid #222', borderRadius: 11, padding: '7px 7px 7px 13px', alignItems: 'flex-end' }}>
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept=".txt"
+              onChange={handleFileUpload}
+              style={{ display: 'none' }}
+            />
+            <button
+              onClick={() => fileInputRef.current?.click()}
+              disabled={loading}
+              title="Upload .txt job description"
+              style={{ width: 28, height: 28, borderRadius: 6, background: 'transparent', border: 'none', cursor: loading ? 'default' : 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, opacity: loading ? 0.3 : 0.5 }}
+            >
+              <Paperclip size={14} color="#888" />
+            </button>
             <textarea
               ref={textareaRef}
               value={input}
               onChange={e => setInput(e.target.value)}
               onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSubmit(); } }}
-              onInput={e => { const t = e.currentTarget; t.style.height = 'auto'; t.style.height = `${Math.min(t.scrollHeight, 180)}px`; }}
+              onInput={e => { const t = e.currentTarget; t.style.height = 'auto'; t.style.height = `${Math.min(t.scrollHeight, 300)}px`; }}
               placeholder={preview ? 'Edit resume, ask a question, or paste a new JD/URL...' : 'Paste job URL or description...'}
               rows={1}
               disabled={loading}
-              style={{ flex: 1, background: 'transparent', border: 'none', outline: 'none', color: '#e8e8e8', fontSize: 13, resize: 'none', maxHeight: 180, lineHeight: 1.5, fontFamily: 'inherit', paddingTop: 3 }}
+              style={{ flex: 1, background: 'transparent', border: 'none', outline: 'none', color: '#e8e8e8', fontSize: 13, resize: 'none', maxHeight: 300, lineHeight: 1.5, fontFamily: 'inherit', paddingTop: 3 }}
             />
             <button
               onClick={handleSubmit}
@@ -622,7 +659,7 @@ export default function Home() {
               {loading ? <Loader2 size={14} color="#444" className="animate-spin" /> : <Send size={14} color={input.trim() ? '#fff' : '#444'} />}
             </button>
           </div>
-          <div style={{ fontSize: 10, color: '#2a2a2a', marginTop: 5, textAlign: 'center' }}>Enter to send · Shift+Enter for newline</div>
+          <div style={{ fontSize: 10, color: '#2a2a2a', marginTop: 5, textAlign: 'center' }}>Enter to send · Shift+Enter for newline · 📎 upload .txt JD</div>
         </div>
       </div>
 
@@ -633,7 +670,9 @@ export default function Home() {
             result={preview}
             coverLetterHtml={coverLetterHtml}
             initialTab={previewInitialTab}
-            onClose={() => { setPreview(null); setCoverLetterHtml(null); setPreviewInitialTab('resume'); }}
+            onClose={() => { setPreview(null); setCoverLetterHtml(null); setPreviewInitialTab('resume'); setHtmlHistory([]); }}
+            onUndo={handleUndo}
+            canUndo={htmlHistory.length > 0}
           />
         </div>
       )}

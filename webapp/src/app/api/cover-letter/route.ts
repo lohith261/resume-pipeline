@@ -32,10 +32,20 @@ Candidate resume:\n${resumeText}`,
     700,
   );
 
-  // Extract name and contact from resume HTML (grab from header section)
-  const nameMatch = resumeHtml?.match(/<h1[^>]*>(.*?)<\/h1>/i) ??
-                    resumeHtml?.match(/class="name"[^>]*>(.*?)</i);
+  // Extract name and contact details from resume HTML
+  const nameMatch = resumeHtml?.match(/<h1[^>]*>([\s\S]*?)<\/h1>/i);
   const name = nameMatch ? nameMatch[1].replace(/<[^>]+>/g, '').trim() : 'Bandreddy Sri Sai Lohith';
+
+  // Pull contact fields from the contact-item spans (avoids matching project links)
+  const email      = (resumeHtml?.match(/\b([\w.+\-]+@[\w\-]+\.[a-z]{2,})\b/i) ?? [])[1]
+                     ?? 'bandreddysrisailohith@gmail.com';
+  const phone      = (resumeHtml?.match(/<span>(\d{10,12})<\/span>/) ?? [])[1]
+                     ?? '8688457071';
+  const linkedinId = (resumeHtml?.match(/linkedin\.com\/(in\/[\w\-]+)/) ?? [])[1]
+                     ?? 'in/srisailohith';
+  // GitHub: match the plain contact span (no trailing slash/path) to get root profile
+  const githubUser = (resumeHtml?.match(/github\.com\/([\w\-]+)<\/span>/) ?? [])[1]
+                     ?? 'lohith261';
 
   const today = new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
 
@@ -108,8 +118,8 @@ Candidate resume:\n${resumeText}`,
   <div class="header">
     <div class="header-name">${name}</div>
     <div class="header-contact">
-      bandreddysrisailohith@gmail.com &nbsp;·&nbsp; 8688457071<br>
-      linkedin.com/in/srisailohith &nbsp;·&nbsp; github.com/lohith261
+      ${email} &nbsp;·&nbsp; ${phone}<br>
+      ${linkedinId} &nbsp;·&nbsp; github.com/${githubUser}
     </div>
   </div>
 

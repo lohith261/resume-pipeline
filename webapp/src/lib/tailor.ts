@@ -158,12 +158,34 @@ export async function extractKeywords(jd: string): Promise<string[]> {
     `Extract technical keywords only:\n\n${jd.slice(0, 4000)}`,
     1000,
   );
+  let raw: string[] = [];
   try {
     const clean = res.replace(/```(?:json)?|```/g, '').trim();
     const parsed = JSON.parse(clean);
-    if (Array.isArray(parsed)) return parsed.map(String).filter(Boolean);
-  } catch { /* fallthrough */ }
-  return (res.match(/"([^"]+)"/g) ?? []).map(s => s.replace(/"/g, ''));
+    if (Array.isArray(parsed)) raw = parsed.map(String).filter(Boolean);
+    else raw = (res.match(/"([^"]+)"/g) ?? []).map(s => s.replace(/"/g, ''));
+  } catch {
+    raw = (res.match(/"([^"]+)"/g) ?? []).map(s => s.replace(/"/g, ''));
+  }
+  return deduplicateKeywords(raw);
+}
+
+/** Remove near-duplicate keywords (e.g. "React" + "ReactJS") using 80% token overlap. */
+function deduplicateKeywords(keywords: string[]): string[] {
+  const kept: string[] = [];
+  for (const kw of keywords) {
+    const kwToks = tokenize(kw);
+    const isDuplicate = kept.some(existing => {
+      const exToks = tokenize(existing);
+      const smaller = Math.min(kwToks.size, exToks.size);
+      if (smaller === 0) return false;
+      let overlap = 0;
+      kwToks.forEach(t => { if (exToks.has(t)) overlap++; });
+      return overlap / smaller >= 0.8;
+    });
+    if (!isDuplicate) kept.push(kw);
+  }
+  return kept;
 }
 
 export async function detectCompanyRole(jd: string): Promise<{ company: string; role: string }> {

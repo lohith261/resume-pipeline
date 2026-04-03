@@ -47,7 +47,7 @@ async function callOpenRouter(system: string, user: string, maxTokens: number): 
         OPENROUTER_URL, OPENROUTER_MODEL,
         {
           Authorization: `Bearer ${OPENROUTER_KEY}`,
-          'HTTP-Referer': 'https://webapp-ten-beryl.vercel.app',
+          'HTTP-Referer': process.env.SITE_URL ?? 'https://jobtailor.in',
           'X-Title': 'Resume Tailor',
         },
         system, user, Math.min(maxTokens, 8000),
