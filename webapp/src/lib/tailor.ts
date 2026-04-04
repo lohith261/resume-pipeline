@@ -241,6 +241,9 @@ CRITICAL RULES:
 7. ⛔ Do NOT wrap keywords in <strong> or <b> tags — no bolding of any words
 8. Do NOT change HTML structure, CSS, or section headings
 9. Return the COMPLETE modified HTML — nothing else
+10. Every bullet MUST start with a strong past-tense action verb (Architected, Engineered, Built, Designed, Deployed, Integrated, Spearheaded, Streamlined, Delivered, Surfaced, Automated) — never start with "Responsible for", "Worked on", "Helped", or passive phrasing
+11. If you edit a bullet, verify it still contains at least one quantified outcome (%, number, time saved, scale) — if the original had one, preserve or strengthen it; never edit it out
+12. On the second pass, prioritise placing keywords in the top 2–3 bullets of the most recent role, as recruiters spend the first 7 seconds scanning that zone
 
 ${compressHtml(baseHtml)}`,
     6000,
