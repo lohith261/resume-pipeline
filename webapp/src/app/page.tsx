@@ -221,31 +221,111 @@ function PreviewPanel({ result, coverLetterHtml, initialTab = 'resume', onClose,
   function handleDownloadTxt() {
     const slug = getSlug();
 
-    // Parse HTML → clean plain text for ATS/Workday form parsing
-    const div = document.createElement('div');
-    div.innerHTML = activeHtml;
+    // Parse HTML into a structured DOM — never use innerText on the raw tree
+    // because HTML attributes (id, data-*, class values) bleed into innerText
+    // on some browsers and produce garbage like UUIDs in address fields.
+    const root = document.createElement('div');
+    root.innerHTML = activeHtml;
 
-    // Drop non-content tags
-    div.querySelectorAll('style, script, link, meta').forEach(el => el.remove());
+    const t = (el: Element | null | undefined) => el?.textContent?.trim() ?? '';
 
-    // Prefix every list item with a bullet so Workday can recognise bullets
-    div.querySelectorAll('li').forEach(el => el.insertAdjacentText('afterbegin', '• '));
+    const lines: string[] = [];
 
-    // Mount off-screen so innerText correctly resolves block/inline whitespace
-    const host = document.createElement('div');
-    host.style.cssText = 'position:fixed;left:-9999px;top:0;width:800px;white-space:pre-wrap';
-    host.innerHTML = div.innerHTML;
-    document.body.appendChild(host);
-    let text = host.innerText;
-    document.body.removeChild(host);
+    // ── NAME ──────────────────────────────────────────────────────────────
+    const name = t(root.querySelector('.header h1, h1'));
+    if (name) { lines.push(name); lines.push(''); }
 
-    // Normalise whitespace
-    text = text
-      .replace(/[ \t]+/g, ' ')       // collapse inline spaces/tabs
-      .replace(/\n[ \t]+/g, '\n')     // strip leading spaces on each line
-      .replace(/[ \t]+\n/g, '\n')     // strip trailing spaces on each line
-      .replace(/\n{3,}/g, '\n\n')     // max one blank line between sections
-      .trim();
+    // ── CONTACT ───────────────────────────────────────────────────────────
+    const contactParts: string[] = [];
+    root.querySelectorAll('.contact span, .contact a').forEach(el => {
+      const v = t(el);
+      if (v) contactParts.push(v);
+    });
+    if (contactParts.length) { lines.push(contactParts.join(' | ')); lines.push(''); }
+
+    // ── Helper: find a section by title keyword ────────────────────────
+    const findSection = (keyword: string) =>
+      [...root.querySelectorAll('.section')].find(s =>
+        s.querySelector('.section-title')?.textContent?.toLowerCase().includes(keyword)
+      );
+
+    // ── SUMMARY ───────────────────────────────────────────────────────────
+    const summarySection = findSection('summary') ?? findSection('profile');
+    if (summarySection) {
+      const para = t(summarySection.querySelector('p'));
+      if (para) { lines.push(para); lines.push(''); }
+    }
+
+    // ── SKILLS ────────────────────────────────────────────────────────────
+    const skillsSection = findSection('skill');
+    if (skillsSection) {
+      lines.push('SKILLS');
+      skillsSection.querySelectorAll('.skill-row').forEach(row => {
+        const cat = t(row.querySelector('.skill-cat'));
+        const val = t(row.querySelector('.skill-val'));
+        if (cat && val) lines.push(`${cat}: ${val}`);
+      });
+      lines.push('');
+    }
+
+    // ── EXPERIENCE ────────────────────────────────────────────────────────
+    // Each job entry must have Title / Company / Date on separate lines so
+    // Workday's parser can map them to the correct form fields.
+    const expSection = findSection('experience');
+    if (expSection) {
+      lines.push('EXPERIENCE');
+      expSection.querySelectorAll('.job').forEach(job => {
+        const title   = t(job.querySelector('.job-title'));
+        const company = t(job.querySelector('.job-company'));
+        const date    = t(job.querySelector('.job-date'));
+        if (title)   lines.push(title);
+        if (company) lines.push(company);
+        if (date)    lines.push(date);
+        job.querySelectorAll('li').forEach(li => lines.push('• ' + t(li)));
+        lines.push('');
+      });
+    }
+
+    // ── PROJECTS ──────────────────────────────────────────────────────────
+    const projSection = findSection('project');
+    if (projSection) {
+      lines.push('PROJECTS');
+      projSection.querySelectorAll('.project-block').forEach(proj => {
+        const projName = t(proj.querySelector('.project-name'));
+        const urls = [...proj.querySelectorAll('.project-links a')]
+          .map(a => (a as HTMLAnchorElement).href || t(a))
+          .filter(Boolean)
+          .join(' | ');
+        lines.push(projName + (urls ? ' — ' + urls : ''));
+        proj.querySelectorAll('li').forEach(li => lines.push('• ' + t(li)));
+        lines.push('');
+      });
+    }
+
+    // ── EDUCATION ─────────────────────────────────────────────────────────
+    const eduSection = findSection('education');
+    if (eduSection) {
+      lines.push('EDUCATION');
+      const degree = t(eduSection.querySelector('.edu-degree'));
+      const school = t(eduSection.querySelector('.edu-school'));
+      const year   = t(eduSection.querySelector('.edu-year'));
+      if (degree) lines.push(degree);
+      if (school) lines.push(school);
+      if (year)   lines.push(year);
+      eduSection.querySelectorAll('li').forEach(li => lines.push('• ' + t(li)));
+      lines.push('');
+    }
+
+    // ── AWARDS / CERTIFICATIONS ───────────────────────────────────────────
+    ['award', 'certification', 'honour', 'honor'].forEach(kw => {
+      const sec = findSection(kw);
+      if (!sec) return;
+      lines.push(t(sec.querySelector('.section-title')).toUpperCase());
+      sec.querySelectorAll('li').forEach(li => lines.push('• ' + t(li)));
+      lines.push('');
+    });
+
+    const text = lines.join('\n').replace(/\n{3,}/g, '\n\n').trim();
 
     const blob = new Blob([text], { type: 'text/plain;charset=utf-8' });
     const url = URL.createObjectURL(blob);
