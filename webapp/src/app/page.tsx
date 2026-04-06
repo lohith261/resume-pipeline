@@ -32,6 +32,11 @@ interface TailorResult {
   classification?: Classification;
 }
 
+interface InterviewQuestion {
+  question: string;
+  star: { situation: string; task: string; action: string; result: string };
+}
+
 type Message =
   | { type: 'user';         text: string }
   | { type: 'thinking';     steps: Step[] }
@@ -49,6 +54,18 @@ const isCoverLetterRequest = (s: string) => /cover.?letter|covering letter|write
 function CoverageBadge({ pct }: { pct: number }) {
   const color = pct >= 90 ? '#22c55e' : pct >= 70 ? '#f59e0b' : '#ef4444';
   return <span style={{ color, fontWeight: 700, fontSize: 15 }}>{pct}%</span>;
+}
+
+function ScoreBar({ label, pct, color }: { label: string; pct: number; color: string }) {
+  return (
+    <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 11 }}>
+      <span style={{ color: '#666', width: 100, flexShrink: 0 }}>{label}</span>
+      <div style={{ flex: 1, background: '#1a1a1a', borderRadius: 3, height: 5, overflow: 'hidden' }}>
+        <div style={{ width: `${pct}%`, height: '100%', background: color, borderRadius: 3, transition: 'width 0.6s ease' }} />
+      </div>
+      <span style={{ color, fontWeight: 600, width: 32, textAlign: 'right' }}>{pct}%</span>
+    </div>
+  );
 }
 
 function StepsList({ steps }: { steps: Step[] }) {
@@ -95,15 +112,23 @@ function ResultCard({ result, onView }: { result: TailorResult; onView: (r: Tail
             </div>
           )}
         </div>
-        <div style={{ textAlign: 'right' }}>
-          <div style={{ fontSize: 11, color: '#666', marginBottom: 2 }}>Coverage</div>
-          <div style={{ display: 'flex', gap: 5, alignItems: 'center', fontSize: 13 }}>
-            <span style={{ color: '#555' }}>{result.before.pct}%</span>
-            <ChevronRight size={11} color="#444" />
-            <CoverageBadge pct={result.after.pct} />
-          </div>
-        </div>
       </div>
+
+      {/* Fit Score breakdown */}
+      {(() => {
+        const kwPct   = result.after.pct;
+        const rolePct = Math.round((result.classification?.confidence ?? 0.7) * 100);
+        const overall = Math.round(kwPct * 0.6 + rolePct * 0.4);
+        const barColor = (p: number) => p >= 75 ? '#22c55e' : p >= 55 ? '#f59e0b' : '#ef4444';
+        return (
+          <div style={{ marginBottom: 12, display: 'flex', flexDirection: 'column', gap: 5 }}>
+            <div style={{ fontSize: 10, color: '#555', marginBottom: 2, textTransform: 'uppercase', letterSpacing: 0.5 }}>Fit Score</div>
+            <ScoreBar label="Keyword Match"   pct={kwPct}   color={barColor(kwPct)} />
+            <ScoreBar label="Role Alignment"  pct={rolePct} color={barColor(rolePct)} />
+            <ScoreBar label="Overall Fit"     pct={overall} color={barColor(overall)} />
+          </div>
+        );
+      })()}
 
       {/* Keywords */}
       <div style={{ marginBottom: 12 }}>
@@ -177,16 +202,40 @@ function ResultCard({ result, onView }: { result: TailorResult; onView: (r: Tail
 function PreviewPanel({ result, coverLetterHtml, initialTab = 'resume', onClose, onUndo, canUndo }: {
   result: TailorResult;
   coverLetterHtml: string | null;
-  initialTab?: 'resume' | 'cover';
+  initialTab?: 'resume' | 'cover' | 'interview';
   onClose: () => void;
   onUndo?: () => void;
   canUndo?: boolean;
 }) {
-  const [tab, setTab] = useState<'resume' | 'cover'>(initialTab);
+  const [tab, setTab]                       = useState<'resume' | 'cover' | 'interview'>(initialTab);
+  const [interviewQs, setInterviewQs]       = useState<InterviewQuestion[] | null>(null);
+  const [interviewLoading, setInterviewLoading] = useState(false);
+  const [expandedQ, setExpandedQ]           = useState<number | null>(null);
   const activeHtml = tab === 'cover' && coverLetterHtml ? coverLetterHtml : result.html;
 
   // Sync to cover tab when a new cover letter arrives
   useEffect(() => { if (initialTab === 'cover') setTab('cover'); }, [initialTab]);
+
+  // Fetch interview questions on first visit to that tab
+  useEffect(() => {
+    if (tab !== 'interview' || interviewQs || interviewLoading) return;
+    setInterviewLoading(true);
+    fetch('/api/interview-prep', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        resumeHtml: result.html,
+        company: result.company,
+        role: result.role,
+        keywords: result.keywords,
+        research: result.research ?? '',
+      }),
+    })
+      .then(r => r.json())
+      .then(d => { if (d.questions) setInterviewQs(d.questions); })
+      .catch(() => {})
+      .finally(() => setInterviewLoading(false));
+  }, [tab, interviewQs, interviewLoading, result]);
 
   function getSlug() {
     const base = tab === 'cover'
@@ -345,58 +394,101 @@ function PreviewPanel({ result, coverLetterHtml, initialTab = 'resume', onClose,
         <div>
           <div style={{ fontWeight: 600, fontSize: 14 }}>{result.company} — {result.role}</div>
           <div style={{ fontSize: 12, color: '#666', marginTop: 2 }}>
-            {isResume
+            {tab === 'resume'
               ? <>Coverage: <CoverageBadge pct={result.after.pct} /> &nbsp;·&nbsp; {result.after.covered.length}/{result.after.total} keywords</>
-              : <span style={{ color: '#a0b4ff' }}>Cover Letter</span>}
+              : tab === 'cover'
+              ? <span style={{ color: '#a0b4ff' }}>Cover Letter</span>
+              : <span style={{ color: '#f59e0b' }}>Interview Prep · 5 questions tailored to this JD</span>}
           </div>
         </div>
         <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
           {/* Tabs */}
-          {coverLetterHtml && (
-            <div style={{ display: 'flex', gap: 2, background: '#1a1a1a', borderRadius: 7, padding: 3 }}>
-              {(['resume', 'cover'] as const).map(t => (
-                <button key={t} onClick={() => setTab(t)} style={{ background: tab === t ? '#6366f1' : 'transparent', color: tab === t ? '#fff' : '#666', border: 'none', borderRadius: 5, padding: '4px 10px', fontSize: 11, fontWeight: 500, cursor: 'pointer' }}>
-                  {t === 'resume' ? '📄 Resume' : '✉️ Cover Letter'}
-                </button>
-              ))}
-            </div>
-          )}
-          {canUndo && (
+          <div style={{ display: 'flex', gap: 2, background: '#1a1a1a', borderRadius: 7, padding: 3 }}>
+            <button onClick={() => setTab('resume')} style={{ background: tab === 'resume' ? '#6366f1' : 'transparent', color: tab === 'resume' ? '#fff' : '#666', border: 'none', borderRadius: 5, padding: '4px 10px', fontSize: 11, fontWeight: 500, cursor: 'pointer' }}>📄 Resume</button>
+            {coverLetterHtml && <button onClick={() => setTab('cover')} style={{ background: tab === 'cover' ? '#6366f1' : 'transparent', color: tab === 'cover' ? '#fff' : '#666', border: 'none', borderRadius: 5, padding: '4px 10px', fontSize: 11, fontWeight: 500, cursor: 'pointer' }}>✉️ Cover</button>}
+            <button onClick={() => setTab('interview')} style={{ background: tab === 'interview' ? '#f59e0b' : 'transparent', color: tab === 'interview' ? '#000' : '#666', border: 'none', borderRadius: 5, padding: '4px 10px', fontSize: 11, fontWeight: 500, cursor: 'pointer' }}>🎯 Interview</button>
+          </div>
+          {canUndo && tab !== 'interview' && (
             <button onClick={onUndo} title="Undo last edit" style={{ background: '#1a1a1a', color: '#f59e0b', border: '1px solid #3a2a00', borderRadius: 8, padding: '7px 12px', fontSize: 13, fontWeight: 500, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6 }}>
               <Undo2 size={13} /> Undo
             </button>
           )}
-          <button onClick={handleDownload} style={{ background: '#6366f1', color: '#fff', border: 'none', borderRadius: 8, padding: '7px 14px', fontSize: 13, fontWeight: 500, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6 }}>
-            <Download size={13} /> PDF
-          </button>
-          <button onClick={handleDownloadTxt} title="Plain text — best for Workday / ATS form parsing" style={{ background: '#1e293b', color: '#86efac', border: '1px solid #166534', borderRadius: 8, padding: '7px 14px', fontSize: 13, fontWeight: 500, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6 }}>
-            <Download size={13} /> TXT
-          </button>
+          {tab !== 'interview' && <>
+            <button onClick={handleDownload} style={{ background: '#6366f1', color: '#fff', border: 'none', borderRadius: 8, padding: '7px 14px', fontSize: 13, fontWeight: 500, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6 }}>
+              <Download size={13} /> PDF
+            </button>
+            <button onClick={handleDownloadTxt} title="Plain text — best for Workday / ATS form parsing" style={{ background: '#1e293b', color: '#86efac', border: '1px solid #166534', borderRadius: 8, padding: '7px 14px', fontSize: 13, fontWeight: 500, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6 }}>
+              <Download size={13} /> TXT
+            </button>
+          </>}
           <button onClick={onClose} style={{ background: '#222', color: '#888', border: 'none', borderRadius: 8, padding: '7px 12px', fontSize: 13, cursor: 'pointer' }}>✕</button>
         </div>
       </div>
 
-      {/* Iframe */}
-      <div style={{ flex: 1, overflowY: 'auto', background: '#444', display: 'flex', justifyContent: 'center', padding: '24px 24px 48px' }}>
-        <div style={{ position: 'relative', width: 794 }}>
-          <iframe
-            key={tab}
-            src={`data:text/html;charset=utf-8,${encodeURIComponent(activeHtml)}`}
-            style={{ width: 794, height: isResume ? 2246 : 1122, border: 'none', boxShadow: '0 8px 40px rgba(0,0,0,0.6)', borderRadius: 2, display: 'block' }}
-            title={isResume ? 'Resume Preview' : 'Cover Letter Preview'}
-          />
-          {/* Page-break indicator — resume only */}
-          {isResume && (
-            <div style={{ position: 'absolute', top: 1123, left: -32, right: -32, pointerEvents: 'none', zIndex: 10 }}>
-              <div style={{ height: 3, background: '#ef4444', opacity: 0.85 }} />
-              <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 4 }}>
-                <span style={{ background: '#ef4444', color: '#fff', fontSize: 10, fontWeight: 700, padding: '2px 8px', borderRadius: '0 0 4px 4px', letterSpacing: 0.5 }}>PAGE 1 END</span>
-                <span style={{ background: '#ef4444', color: '#fff', fontSize: 10, fontWeight: 700, padding: '2px 8px', borderRadius: '0 0 4px 4px', letterSpacing: 0.5 }}>PAGE 2 START</span>
-              </div>
+      {/* Content */}
+      {tab === 'interview' ? (
+        <div style={{ flex: 1, overflowY: 'auto', background: '#111', padding: '24px 32px 48px' }}>
+          {interviewLoading && (
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10, color: '#888', fontSize: 13, marginTop: 40, justifyContent: 'center' }}>
+              <Loader2 size={16} color="#f59e0b" className="animate-spin" />
+              Generating 5 tailored questions...
             </div>
           )}
+          {!interviewLoading && interviewQs && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 12, maxWidth: 720, margin: '0 auto' }}>
+              <div style={{ fontSize: 11, color: '#555', marginBottom: 4 }}>
+                Questions tailored for <strong style={{ color: '#888' }}>{result.role}</strong> at <strong style={{ color: '#888' }}>{result.company}</strong> · click a question to see your STAR answer
+              </div>
+              {interviewQs.map((q, i) => (
+                <div key={i} style={{ background: '#1a1a1a', border: `1px solid ${expandedQ === i ? '#f59e0b44' : '#222'}`, borderRadius: 10, overflow: 'hidden', transition: 'border-color 0.2s' }}>
+                  <button
+                    onClick={() => setExpandedQ(expandedQ === i ? null : i)}
+                    style={{ width: '100%', background: 'transparent', border: 'none', padding: '14px 16px', textAlign: 'left', cursor: 'pointer', display: 'flex', alignItems: 'flex-start', gap: 12 }}
+                  >
+                    <span style={{ background: '#f59e0b22', color: '#f59e0b', borderRadius: 20, width: 22, height: 22, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, fontWeight: 700, flexShrink: 0, marginTop: 1 }}>{i + 1}</span>
+                    <span style={{ color: '#e8e8e8', fontSize: 13, fontWeight: 500, lineHeight: 1.4, flex: 1 }}>{q.question}</span>
+                    <ChevronRight size={14} color="#444" style={{ transform: expandedQ === i ? 'rotate(90deg)' : 'none', transition: '0.15s', flexShrink: 0, marginTop: 3 }} />
+                  </button>
+                  {expandedQ === i && (
+                    <div style={{ borderTop: '1px solid #222', padding: '14px 16px 16px 50px', display: 'flex', flexDirection: 'column', gap: 10 }}>
+                      {(['situation', 'task', 'action', 'result'] as const).map(key => (
+                        <div key={key}>
+                          <div style={{ fontSize: 10, fontWeight: 700, color: '#f59e0b', textTransform: 'uppercase', letterSpacing: 0.8, marginBottom: 3 }}>{key}</div>
+                          <div style={{ fontSize: 12, color: '#ccc', lineHeight: 1.55 }}>{q.star[key]}</div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
+          {!interviewLoading && !interviewQs && (
+            <div style={{ textAlign: 'center', color: '#555', fontSize: 13, marginTop: 60 }}>Could not generate questions — try again.</div>
+          )}
         </div>
-      </div>
+      ) : (
+        <div style={{ flex: 1, overflowY: 'auto', background: '#444', display: 'flex', justifyContent: 'center', padding: '24px 24px 48px' }}>
+          <div style={{ position: 'relative', width: 794 }}>
+            <iframe
+              key={tab}
+              src={`data:text/html;charset=utf-8,${encodeURIComponent(activeHtml)}`}
+              style={{ width: 794, height: isResume ? 2246 : 1122, border: 'none', boxShadow: '0 8px 40px rgba(0,0,0,0.6)', borderRadius: 2, display: 'block' }}
+              title={isResume ? 'Resume Preview' : 'Cover Letter Preview'}
+            />
+            {/* Page-break indicator — resume only */}
+            {isResume && (
+              <div style={{ position: 'absolute', top: 1123, left: -32, right: -32, pointerEvents: 'none', zIndex: 10 }}>
+                <div style={{ height: 3, background: '#ef4444', opacity: 0.85 }} />
+                <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 4 }}>
+                  <span style={{ background: '#ef4444', color: '#fff', fontSize: 10, fontWeight: 700, padding: '2px 8px', borderRadius: '0 0 4px 4px', letterSpacing: 0.5 }}>PAGE 1 END</span>
+                  <span style={{ background: '#ef4444', color: '#fff', fontSize: 10, fontWeight: 700, padding: '2px 8px', borderRadius: '0 0 4px 4px', letterSpacing: 0.5 }}>PAGE 2 START</span>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
