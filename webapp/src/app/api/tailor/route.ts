@@ -63,6 +63,14 @@ export async function POST(req: NextRequest) {
           send('step', { id: step, message, data });
         });
 
+        // Inject <base> tag so relative asset URLs (e.g. /photo_professional.jpg)
+        // resolve to the app origin even when HTML is served from Vercel Blob CDN.
+        const origin = req.nextUrl.origin;
+        const htmlWithBase = result.html.replace(
+          /(<head[^>]*>)/i,
+          `$1<base href="${origin}" />`,
+        );
+
         // Store the tailored HTML
         const slug    = `${slugify(company)}_${slugify(role)}`;
         const fileName = `resume_${slug}.html`;
@@ -71,7 +79,7 @@ export async function POST(req: NextRequest) {
 
         if (process.env.BLOB_READ_WRITE_TOKEN) {
           // Production: store in Vercel Blob
-          const blob = await put(`tailored/${slug}/${fileName}`, result.html, {
+          const blob = await put(`tailored/${slug}/${fileName}`, htmlWithBase, {
             access: 'public',
             contentType: 'text/html',
             addRandomSuffix: false,
@@ -79,14 +87,14 @@ export async function POST(req: NextRequest) {
           htmlUrl = blob.url;
         } else {
           // Dev: store locally via data URL (client will render inline)
-          htmlUrl = `data:text/html;base64,${Buffer.from(result.html).toString('base64')}`;
+          htmlUrl = `data:text/html;base64,${Buffer.from(htmlWithBase).toString('base64')}`;
         }
 
         send('done', {
           company:  result.company,
           role:     result.role,
           htmlUrl,
-          html:           result.html,
+          html:           htmlWithBase,
           before:         result.before,
           after:          result.after,
           keywords:       result.keywords,
