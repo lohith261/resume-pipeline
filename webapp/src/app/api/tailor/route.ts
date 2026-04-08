@@ -46,7 +46,7 @@ export async function POST(req: NextRequest) {
           }
           else if (step === 'base_selected') {
             const typeLabel: Record<string, string> = { ai_engineer: 'AI Engineer', data_analyst: 'Data Analyst', hybrid: 'Hybrid' };
-            const countryLabel: Record<string, string> = { de: 'Germany 🇩🇪', nl: 'Netherlands 🇳🇱', sg: 'Singapore 🇸🇬', ae: 'UAE 🇦🇪' };
+            const countryLabel: Record<string, string> = { de: 'Germany 🇩🇪', nl: 'Netherlands 🇳🇱', sg: 'Singapore 🇸🇬', ae: 'UAE 🇦🇪', jp: 'Japan 🇯🇵' };
             const roleStr    = typeLabel[(d?.type as string) ?? 'hybrid'] ?? 'Hybrid';
             const countryStr = d?.country ? countryLabel[d.country as string] ?? '' : 'Global 🌐';
             message = `Using ${roleStr} base · ${countryStr}`;

@@ -72,7 +72,7 @@ function slugify(text: string) {
 }
 
 export type ResumeType = 'ai_engineer' | 'data_analyst' | 'hybrid';
-export type CountryCode = 'de' | 'nl' | 'sg' | 'ae';
+export type CountryCode = 'de' | 'nl' | 'sg' | 'ae' | 'jp';
 
 export interface Classification {
   type: ResumeType;
@@ -92,6 +92,7 @@ const COUNTRY_RESUME_FILES: Record<CountryCode, Record<ResumeType, string>> = {
   nl: { ai_engineer: 'resume_nl_engineer.html', hybrid: 'resume_nl_hybrid.html', data_analyst: 'resume_nl_analyst.html' },
   sg: { ai_engineer: 'resume_sg_engineer.html', hybrid: 'resume_sg_hybrid.html', data_analyst: 'resume_sg_analyst.html' },
   ae: { ai_engineer: 'resume_ae_engineer.html', hybrid: 'resume_ae_hybrid.html', data_analyst: 'resume_ae_analyst.html' },
+  jp: { ai_engineer: 'resume_jp_engineer.html', hybrid: 'resume_jp_hybrid.html', data_analyst: 'resume_jp_analyst.html' },
 };
 
 export function getBaseHtml(type: ResumeType = 'hybrid', country?: CountryCode | null): string {
@@ -120,6 +121,7 @@ country rules (detect from location, company HQ, currency, office city, visa men
 - "nl" → Netherlands (Amsterdam, Rotterdam, Eindhoven, B.V., EUR, IND, HSM/Kennismigrant)
 - "sg" → Singapore (Singapore, SGD, Pte Ltd, MOM, EP/Employment Pass, COMPASS)
 - "ae" → UAE/Dubai (Dubai, Abu Dhabi, AED, UAE, DIFC, free zone, LLC)
+- "jp" → Japan (Tokyo, Osaka, Kyoto, Fukuoka, JPY, ¥, K.K., G.K., Kabushiki Kaisha, JLPT, work visa Japan, Engineer visa Japan, Rakuten, Mercari, LINE, DeNA, CyberAgent, NTT, Fujitsu, SoftBank, Sony, Recruit)
 - null → country unclear or not one of the above`,
     jd.slice(0, 3000),
     350,
@@ -130,7 +132,7 @@ country rules (detect from location, company HQ, currency, office city, visa men
     const type = (['ai_engineer', 'data_analyst', 'hybrid'] as ResumeType[]).includes(parsed.type)
       ? parsed.type as ResumeType
       : 'hybrid';
-    const validCountries: CountryCode[] = ['de', 'nl', 'sg', 'ae'];
+    const validCountries: CountryCode[] = ['de', 'nl', 'sg', 'ae', 'jp'];
     const country = validCountries.includes(parsed.country) ? parsed.country as CountryCode : null;
     return { type, confidence: parsed.confidence ?? 0.7, reasoning: parsed.reasoning ?? '', country };
   } catch {
@@ -274,6 +276,8 @@ ${country === 'sg' ? `
 13. SINGAPORE MARKET: Keep "Employment Pass (shortage occupation — AI/ML)" phrase in the summary. Preserve the COMPASS qualification note in Education. Prioritise AI/ML keywords in top bullets.` : ''}
 ${country === 'ae' ? `
 13. UAE MARKET: Keep "AWS-certified" or cloud certification keywords prominent. Preserve the Languages section. Keep nationality/visa line in header.` : ''}
+${country === 'jp' ? `
+13. JAPAN MARKET: Preserve the photo placeholder, the Languages section (including Japanese language entry), and the visa sponsorship line in the header. Keep tone precise and factual — Japanese employers value concise, evidence-backed statements. Keep the education note about Engineer visa eligibility.` : ''}
 
 ${compressHtml(baseHtml)}`,
     6000,
