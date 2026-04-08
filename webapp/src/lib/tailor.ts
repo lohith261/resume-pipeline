@@ -72,11 +72,13 @@ function slugify(text: string) {
 }
 
 export type ResumeType = 'ai_engineer' | 'data_analyst' | 'hybrid';
+export type CountryCode = 'de' | 'nl' | 'sg' | 'ae';
 
 export interface Classification {
   type: ResumeType;
   confidence: number;
   reasoning: string;
+  country: CountryCode | null;
 }
 
 const RESUME_FILES: Record<ResumeType, string> = {
@@ -85,25 +87,43 @@ const RESUME_FILES: Record<ResumeType, string> = {
   hybrid:       'resume_base.html',
 };
 
-export function getBaseHtml(type: ResumeType = 'hybrid'): string {
+const COUNTRY_RESUME_FILES: Record<CountryCode, string> = {
+  de: 'resume_germany.html',
+  nl: 'resume_netherlands.html',
+  sg: 'resume_singapore.html',
+  ae: 'resume_uae.html',
+};
+
+export function getBaseHtml(type: ResumeType = 'hybrid', country?: CountryCode | null): string {
+  // Country-specific base takes priority
+  if (country && COUNTRY_RESUME_FILES[country]) {
+    const cp = path.join(process.cwd(), 'src', 'data', COUNTRY_RESUME_FILES[country]);
+    if (fs.existsSync(cp)) return fs.readFileSync(cp, 'utf8');
+  }
   const file = RESUME_FILES[type] ?? RESUME_FILES.hybrid;
   const p = path.join(process.cwd(), 'src', 'data', file);
-  // Fall back to hybrid if specific file doesn't exist
   if (!fs.existsSync(p)) return fs.readFileSync(path.join(process.cwd(), 'src', 'data', 'resume_base.html'), 'utf8');
   return fs.readFileSync(p, 'utf8');
 }
 
 export async function classifyJd(jd: string): Promise<Classification> {
   const res = await groqFast(
-    `Classify this job description into exactly one of:
-- "ai_engineer"  → primary focus on LLMs, RAG, LangChain, agents, GenAI, prompt engineering, inference
-- "data_analyst" → primary focus on SQL, Tableau, analytics, dashboards, BI, ETL, statistics, Python data science
-- "hybrid"       → requires both AI engineering AND strong data/analytics skills equally
+    `Classify this job description. Return ONLY valid JSON (no markdown):
+{"type":"ai_engineer|data_analyst|hybrid","confidence":0.0-1.0,"reasoning":"one sentence","country":"de|nl|sg|ae|null"}
 
-Return ONLY valid JSON (no markdown, no explanation):
-{"type":"ai_engineer|data_analyst|hybrid","confidence":0.0-1.0,"reasoning":"one sentence"}`,
+type rules:
+- "ai_engineer" → primary focus on LLMs, RAG, LangChain, agents, GenAI, prompt engineering, inference
+- "data_analyst" → primary focus on SQL, Tableau, analytics, dashboards, BI, ETL, statistics, Python data science
+- "hybrid" → requires both AI engineering AND strong data/analytics skills equally
+
+country rules (detect from location, company HQ, currency, office city, visa mentions):
+- "de" → Germany (Berlin, Munich, Hamburg, Frankfurt, GmbH, EUR salary, Blue Card mentioned)
+- "nl" → Netherlands (Amsterdam, Rotterdam, Eindhoven, B.V., EUR, IND, HSM/Kennismigrant)
+- "sg" → Singapore (Singapore, SGD, Pte Ltd, MOM, EP/Employment Pass, COMPASS)
+- "ae" → UAE/Dubai (Dubai, Abu Dhabi, AED, UAE, DIFC, free zone, LLC)
+- null → country unclear or not one of the above`,
     jd.slice(0, 3000),
-    300,
+    350,
   );
   try {
     const clean = res.replace(/```(?:json)?|```/g, '').trim();
@@ -111,9 +131,11 @@ Return ONLY valid JSON (no markdown, no explanation):
     const type = (['ai_engineer', 'data_analyst', 'hybrid'] as ResumeType[]).includes(parsed.type)
       ? parsed.type as ResumeType
       : 'hybrid';
-    return { type, confidence: parsed.confidence ?? 0.7, reasoning: parsed.reasoning ?? '' };
+    const validCountries: CountryCode[] = ['de', 'nl', 'sg', 'ae'];
+    const country = validCountries.includes(parsed.country) ? parsed.country as CountryCode : null;
+    return { type, confidence: parsed.confidence ?? 0.7, reasoning: parsed.reasoning ?? '', country };
   } catch {
-    return { type: 'hybrid', confidence: 0.5, reasoning: 'classification parse error — using hybrid' };
+    return { type: 'hybrid', confidence: 0.5, reasoning: 'classification parse error — using hybrid', country: null };
   }
 }
 
@@ -217,6 +239,7 @@ export async function tailorHtml(
   role: string,
   research: string,
   isSecondPass = false,
+  country?: CountryCode | null,
 ): Promise<string> {
   if (!missing.length) return baseHtml;
 
@@ -244,6 +267,14 @@ CRITICAL RULES:
 10. Every bullet MUST start with a strong past-tense action verb (Architected, Engineered, Built, Designed, Deployed, Integrated, Spearheaded, Streamlined, Delivered, Surfaced, Automated) — never start with "Responsible for", "Worked on", "Helped", or passive phrasing
 11. If you edit a bullet, verify it still contains at least one quantified outcome (%, number, time saved, scale) — if the original had one, preserve or strengthen it; never edit it out
 12. On the second pass, prioritise placing keywords in the top 2–3 bullets of the most recent role, as recruiters spend the first 7 seconds scanning that zone
+${country === 'de' ? `
+13. GERMANY MARKET: Keep formal tone. Ensure every metric is precise. Do not remove the photo placeholder box or the Anabin degree note.` : ''}
+${country === 'nl' ? `
+13. NETHERLANDS MARKET: Keep the Profile section to 2 sentences max. Maintain clean, direct English. No fluff phrases.` : ''}
+${country === 'sg' ? `
+13. SINGAPORE MARKET: Keep "Employment Pass (shortage occupation — AI/ML)" phrase in the summary. Preserve the COMPASS qualification note in Education. Prioritise AI/ML keywords in top bullets.` : ''}
+${country === 'ae' ? `
+13. UAE MARKET: Keep "AWS-certified" or cloud certification keywords prominent. Preserve the Languages section. Keep nationality/visa line in header.` : ''}
 
 ${compressHtml(baseHtml)}`,
     6000,
@@ -277,7 +308,7 @@ export async function runPipeline(
     onStep('warn', { id: 'warn_keywords', message: '⚠ No keywords extracted — JD may be too short or in an unexpected format' });
   }
 
-  const baseHtml = getBaseHtml(classification.type);
+  const baseHtml = getBaseHtml(classification.type, classification.country);
   const before = scoreCoverage(keywords, baseHtml);
   onStep('coverage_before', { pct: before.pct, missing: before.missing.length });
 
@@ -291,14 +322,14 @@ export async function runPipeline(
   if (before.pct < 90 && before.missing.length) {
     // First pass
     onStep('tailoring', { missing: before.missing.length });
-    html = await tailorHtml(baseHtml, before.missing, company, role, research, false);
+    html = await tailorHtml(baseHtml, before.missing, company, role, research, false, classification.country);
     after = scoreCoverage(keywords, html);
     onStep('tailored', { pct: after.pct });
 
     // Second pass if still below 90% and meaningful keywords remain
     if (after.pct < 90 && after.missing.length > 0) {
       onStep('tailoring2', { missing: after.missing.length });
-      html = await tailorHtml(html, after.missing, company, role, research, true);
+      html = await tailorHtml(html, after.missing, company, role, research, true, classification.country);
       after = scoreCoverage(keywords, html);
       onStep('tailored', { pct: after.pct });
     }

@@ -1,0 +1,413 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<meta name="author" content="Bandreddy Sri Sai Lohith" />
+<title>Bandreddy Sri Sai Lohith – Resume</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: 'Inter', Arial, sans-serif;
+    font-size: 8.6pt;
+    color: #1a1a1a;
+    background: #fff;
+    line-height: 1.42;
+  }
+
+  .page {
+    width: 210mm;
+    height: 297mm;
+    overflow: hidden;
+    padding: 10mm 12mm 10mm 12mm;
+    margin: 0 auto;
+  }
+
+  /* ── HEADER ── */
+  .header {
+    display: flex;
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 6px;
+  }
+  .header-left { flex: 1; }
+  .header h1 {
+    font-size: 17pt;
+    font-weight: 700;
+    letter-spacing: 0.3px;
+    color: #111;
+    margin-bottom: 4px;
+  }
+  .contact {
+    display: flex;
+    justify-content: flex-start;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 14px;
+    font-size: 8pt;
+    color: #333;
+  }
+  .contact a { color: #333; text-decoration: none; }
+  .contact-item {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+  }
+  .contact-item svg {
+    width: 11px;
+    height: 11px;
+    flex-shrink: 0;
+    fill: #444;
+  }
+
+  /* ── PHOTO PLACEHOLDER ── */
+  .photo-placeholder {
+    width: 70px;
+    height: 85px;
+    border: 1.5px dashed #aaa;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 8pt;
+    color: #aaa;
+    flex-shrink: 0;
+    margin-left: 10px;
+  }
+
+  /* ── DIVIDER ── */
+  hr {
+    border: none;
+    border-top: 1.5px solid #222;
+    margin: 6px 0 4px 0;
+  }
+  hr.thin {
+    border-top: 0.5px solid #ccc;
+    margin: 4px 0;
+  }
+
+  /* ── SECTION ── */
+  .section { margin-bottom: 12px; }
+  .section.skills-section { page-break-before: always; break-before: page; }
+  .page-break { page-break-before: always; break-before: page; height: 0; }
+  .section-title {
+    font-size: 9pt;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.6px;
+    color: #111;
+    margin-bottom: 2px;
+  }
+
+  /* ── SUMMARY ── */
+  .summary p {
+    font-size: 8.3pt;
+    color: #222;
+    line-height: 1.34;
+  }
+
+  /* ── EXPERIENCE / PROJECT BLOCKS ── */
+  .job, .project-block { margin-bottom: 8px; page-break-inside: avoid; }
+  .job-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+  }
+  .job-title { font-weight: 700; font-size: 8.8pt; }
+  .job-date  { font-size: 7.8pt; color: #444; font-weight: 500; }
+  .job-company { font-size: 8.2pt; color: #333; margin-bottom: 2px; }
+
+  ul {
+    list-style: none;
+    padding-left: 0;
+    margin: 0;
+  }
+  ul li {
+    padding-left: 11px;
+    position: relative;
+    margin-bottom: 1px;
+    font-size: 8.3pt;
+    line-height: 1.34;
+    color: #222;
+  }
+  ul li::before {
+    content: "•";
+    position: absolute;
+    left: 1px;
+    color: #333;
+    font-size: 8pt;
+  }
+
+  /* ── PROJECTS ── */
+  .project-name {
+    font-weight: 700;
+    font-size: 8.8pt;
+    display: inline;
+  }
+  .project-links {
+    font-size: 7.6pt;
+    color: #555;
+    margin-bottom: 2px;
+  }
+  .project-links a { color: #1a56db; text-decoration: none; }
+
+  /* ── SKILLS ── */
+  .skills-grid { display: flex; flex-direction: column; gap: 1px; }
+  .skill-row { display: flex; gap: 4px; align-items: baseline; font-size: 8.1pt; }
+  .skill-cat { font-weight: 700; white-space: nowrap; min-width: 130px; color: #111; }
+  .skill-val { color: #222; }
+
+  /* ── EDUCATION ── */
+  .edu-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+  }
+  .edu-degree { font-weight: 700; font-size: 8.6pt; }
+  .edu-year   { font-size: 7.8pt; color: #444; }
+  .edu-school { font-size: 8pt; color: #333; }
+
+  /* ── AWARDS ── */
+  .award-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+  }
+  .award-title  { font-weight: 700; font-size: 8.6pt; }
+  .award-year   { font-size: 7.8pt; color: #444; }
+  .award-org    { font-size: 8pt; color: #333; }
+
+  /* ── LANGUAGES ── */
+  .languages-row {
+    font-size: 8.3pt;
+    color: #222;
+    line-height: 1.5;
+  }
+
+  @page { size: A4; margin: 0; }
+  @media print {
+    body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    .page { padding: 10mm 12mm; }
+  }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <!-- ══ HEADER ══ -->
+  <div class="header">
+    <div class="header-left">
+      <h1>Bandreddy Sri Sai Lohith</h1>
+      <div class="contact">
+
+        <div class="contact-item">
+          <!-- Email icon -->
+          <svg viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg">
+            <path d="M2 4a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V4zm2 0v.511l6 4.2 6-4.2V4H4zm12 2.489-5.4 3.78a1 1 0 0 1-1.2 0L4 6.49V16h12V6.489z"/>
+          </svg>
+          <span>bandreddysrisailohith@gmail.com</span>
+        </div>
+
+        <div class="contact-item">
+          <!-- Phone icon -->
+          <svg viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg">
+            <path d="M5.5 1A1.5 1.5 0 0 0 4 2.5v15A1.5 1.5 0 0 0 5.5 19h9a1.5 1.5 0 0 0 1.5-1.5v-15A1.5 1.5 0 0 0 14.5 1h-9zm4.5 15a1 1 0 1 1 0-2 1 1 0 0 1 0 2zM6 3h8v11H6V3z"/>
+          </svg>
+          <span>8688457071</span>
+        </div>
+
+        <div class="contact-item">
+          <!-- Person/ID icon -->
+          <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+            <path d="M12 12c2.7 0 4.8-2.1 4.8-4.8S14.7 2.4 12 2.4 7.2 4.5 7.2 7.2 9.3 12 12 12zm0 2.4c-3.2 0-9.6 1.6-9.6 4.8v2.4h19.2v-2.4c0-3.2-6.4-4.8-9.6-4.8z"/>
+          </svg>
+          <span>Indian National | Employer Visa Sponsorship Required</span>
+        </div>
+
+        <div class="contact-item">
+          <!-- LinkedIn icon -->
+          <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+            <path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433a2.062 2.062 0 0 1-2.063-2.065 2.064 2.064 0 1 1 2.063 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z"/>
+          </svg>
+          <a href="https://linkedin.com/in/srisailohith">linkedin.com/in/srisailohith</a>
+        </div>
+
+        <div class="contact-item">
+          <!-- GitHub icon -->
+          <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+            <path d="M12 0C5.374 0 0 5.373 0 12c0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23A11.509 11.509 0 0 1 12 5.803c1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576C20.566 21.797 24 17.3 24 12c0-6.627-5.373-12-12-12z"/>
+          </svg>
+          <a href="https://github.com/lohith261">github.com/lohith261</a>
+        </div>
+
+      </div>
+    </div>
+    <div class="photo-placeholder">Photo</div>
+  </div>
+
+  <!-- ══ SUMMARY ══ -->
+  <div class="section summary">
+    <div class="section-title">Summary</div>
+    <hr/>
+    <p>
+      AWS-certified AI Engineer with 2+ years at ADP — grew from Data Analyst (85%-accurate sentiment pipeline, 20% complaint reduction) to architecting LLM/RAG risk detection processing 10K+ audit cases/month across 1M+ payroll records with 40% effort reduction.
+      Independently shipped <strong>Job Tailor</strong> and <strong>Keen</strong> end-to-end; stack spans SQL/Python/Tableau, LangChain, RAG, AWS Bedrock/OpenAI/Groq, React/TypeScript, and Node.js/Python.
+    </p>
+  </div>
+
+  <!-- ══ SKILLS ══ -->
+  <div class="section">
+    <div class="section-title">Skills</div>
+    <hr/>
+    <div class="skills-grid">
+      <div class="skill-row"><span class="skill-cat">AI / ML &amp; GenAI</span><span class="skill-val">LLMs, RAG (Retrieval-Augmented Generation) Architectures, LangChain, Groq API, OpenAI API, AWS Bedrock, Vector Search/Embeddings, NLP (Natural Language Processing), Sentiment Analysis, Prompt Engineering, Model Evaluation, Anomaly Detection, Risk Scoring</span></div>
+      <div class="skill-row"><span class="skill-cat">Backend</span><span class="skill-val">Java, Spring Boot, Spring Cloud (Config, Gateway, Circuit Breaker), J2EE, Hibernate, Node.js, Express.js, Python, RESTful APIs, SOAP (JAX-WS, JAX-RS, WSDL)</span></div>
+      <div class="skill-row"><span class="skill-cat">Frontend</span><span class="skill-val">React, Next.js 14, Angular, TypeScript, JavaScript, Redux, RxJS, Tailwind CSS, HTML5, CSS3, WebSockets, WCAG 2.1 Accessibility</span></div>
+      <div class="skill-row"><span class="skill-cat">Cloud &amp; DevOps</span><span class="skill-val">AWS (Lambda, Step Functions, DynamoDB, RDS, Glue, IAM, CloudWatch, Amazon Connect), Pivotal Cloud Foundry, Docker, CI/CD (Jenkins, GitHub Actions), Vercel</span></div>
+      <div class="skill-row"><span class="skill-cat">Databases &amp; Auth</span><span class="skill-val">PostgreSQL, MySQL, NoSQL (DynamoDB), Supabase, Prisma v5, NextAuth.js, SQL</span></div>
+      <div class="skill-row"><span class="skill-cat">Tools &amp; Practices</span><span class="skill-val">Git, Agile/Scrum, Sentry, Resend, scrape.do, Puppeteer, Jira, Code Reviews, SDLC</span></div>
+    </div>
+  </div>
+
+  <!-- ══ EXPERIENCE ══ -->
+  <div class="section">
+    <div class="section-title">Experience</div>
+    <hr/>
+
+    <div class="job">
+      <div class="job-header">
+        <span class="job-title">AI Engineer &amp; Software Engineer</span>
+        <span class="job-date">Jul 2024 – Present</span>
+      </div>
+      <div class="job-company">ADP</div>
+      <ul>
+        <li>Architected LLM/RAG risk detection system processing 10K+ audit cases/month across 1M+ employee records — aligning with audit and compliance stakeholders to flag time fraud, tax miscalculations, and duplicate payments — reducing manual audit effort by 40%.</li>
+        <li>Engineered LangChain investigation agents to automate root-cause analysis across payroll anomalies; improved classification precision to 80% and cut false positives by 25%, eliminating unnecessary escalations.</li>
+        <li>Integrated AWS Bedrock and OpenAI into production HR automation workflows, communicating model tradeoffs with product and support to improve operational efficiency 30% and reduce resolution time 25%.</li>
+        <li>Built RAG pipelines ingesting IRS codes and state labor laws alongside structured payroll data; partnered with compliance to define rules, automated classification, and generated audit trails for every flagged case.</li>
+        <li>Architected Node.js/Express microservices orchestrating LLM inference pipelines, handling 10,000+ daily API calls at &lt;200 ms latency via connection pooling and caching strategies.</li>
+        <li>Deployed on AWS (Lambda, Step Functions, DynamoDB, RDS, Glue) and Pivotal Cloud Foundry; cut infrastructure costs 40% and eliminated 15+ hours of manual testing weekly while maintaining 99.9%+ availability.</li>
+        <li>Engineered React and Angular/TypeScript dashboards for real-time risk visualization and AI-insight drill-downs; incorporated auditor feedback, improving Time-to-Interactive by 1.2 seconds and page performance by 35%.</li>
+        <li>Engineered scalable Java Spring Boot microservices with Spring Cloud (Config, Gateway, Circuit Breaker) for high-availability payroll systems; built SOAP/RESTful APIs (JAX-WS, JAX-RS) for legacy system integration.</li>
+      </ul>
+    </div>
+
+    <div class="job">
+      <div class="job-header">
+        <span class="job-title">Data Analyst</span>
+        <span class="job-date">Sep 2023 – Jun 2024</span>
+      </div>
+      <div class="job-company">ADP</div>
+      <ul>
+        <li>Architected Customer Feedback Intelligence System ingesting 80K–100K records daily from support tickets, app reviews, and chatbot logs; designed incremental pipeline for continuous enrichment without full reprocessing, eliminating overnight batch delays.</li>
+        <li>Surfaced payment failures as the top driver of negative sentiment through cohort analysis; insight directly informed Q3 product prioritization and led to targeted engineering fixes that reduced payment-related complaints by 20%.</li>
+        <li>Engineered OpenAI-powered sentiment classification pipeline achieving 85% accuracy on nuanced complaint categories — replacing rule-based NLP models and cutting manual tagging effort by 50%+, enabling automated processing of the full daily corpus.</li>
+        <li>Delivered Tableau dashboards — sentiment trends, volume by category, and issue drill-downs — used daily by 40+ stakeholders across product and ops teams, aligning cross-functional priorities and enabling data-driven sprint decisions.</li>
+        <li>Designed PostgreSQL schema for raw and enriched feedback; wrote SQL aggregations surfacing top complaint categories, sentiment distribution, and trend time-series; applied strategic indexing that reduced dashboard query load times for 40+ daily users.</li>
+        <li>Built end-to-end Python orchestration layer for text preprocessing, OpenAI API calls, structured output parsing, and PostgreSQL ingestion; pipeline ran on a daily schedule with zero manual intervention across 100K+ records.</li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- ══ PROJECTS ══ -->
+  <div class="section">
+    <div class="section-title">Projects</div>
+    <hr/>
+
+    <!-- Job Tailor -->
+    <div class="project-block">
+      <div class="job-header">
+        <span class="project-name">Job Tailor</span>
+        <span class="job-date"></span>
+      </div>
+      <div class="project-links">
+        <a href="https://github.com/lohith261/CustomJobFinder">github.com/lohith261/CustomJobFinder</a>&nbsp;&nbsp;•&nbsp;&nbsp;
+        <a href="https://jobtailor.in/">jobtailor.in</a>
+      </div>
+      <ul>
+        <li>Shipped full-stack AI job search SaaS (Next.js 14, TypeScript, Tailwind CSS, Prisma v5, PostgreSQL/Supabase, Vercel) for Indian job seekers — owned architecture, development, and deployment end-to-end.</li>
+        <li>Engineered live opportunity inbox scraping Naukri, Indeed India, Internshala, and Adzuna/RemoteOK APIs; applies Groq AI match-scoring with breakdown, supporting sort, filter, pin, and bulk actions.</li>
+        <li>Built AI resume tailoring (PDF upload → ATS keyword gap analysis → bullet rewrite), cover letter generator with tone selector, and cold outreach writer — all powered by Groq API.</li>
+
+      </ul>
+    </div>
+
+    <hr class="thin"/>
+
+    <!-- Keen -->
+    <div class="project-block">
+      <div class="job-header">
+        <span class="project-name">Keen — AI Due Diligence Platform</span>
+        <span class="job-date"></span>
+      </div>
+      <div class="project-links">
+        <a href="https://github.com/lohith261/keen">github.com/lohith261/keen</a>&nbsp;&nbsp;•&nbsp;&nbsp;
+        <a href="https://keen-sigma.vercel.app/">keen-sigma.vercel.app</a>
+      </div>
+      <ul>
+        <li>Architected multi-agent due diligence automation platform for PE firms — research agents integrate Salesforce, NetSuite, SEC EDGAR, HubSpot, and Crunchbase; TinyFish browser automation accesses locked platforms (Bloomberg, LinkedIn, SAP) with real-time pipeline monitoring and pause/resume without progress loss.</li>
+        <li>Engineered Claude AI analysis layer that cross-references aggregated business data to surface revenue mismatches, audit red flags, and risk discrepancies; exports reports as PDF, Excel, or Google Sheets. Stack: React/TypeScript (Vercel) + Python 3.11 (Fly.io) + Supabase + Redis.</li>
+      </ul>
+    </div>
+
+
+  </div>
+
+</div>
+
+<!-- ══ PAGE 2 ══ -->
+<div class="page" style="page-break-before:always;break-before:page;">
+
+  <!-- ══ CERTIFICATIONS ══ -->
+  <div class="section">
+    <div class="section-title">Certifications</div>
+    <hr/>
+    <div class="award-header">
+      <span class="award-title"><a href="https://www.credly.com/earner/earned/badge/098cfd98-fe08-4a87-8a30-cdb4810b7c91" style="color:inherit;text-decoration:none;">Google AI Professional Certificate</a></span>
+      <span class="award-year">Mar 2026</span>
+    </div>
+    <div class="award-org">Coursera</div>
+    <div class="award-header" style="margin-top:5px;">
+      <span class="award-title"><a href="https://www.credly.com/earner/earned/badge/e3f50e0d-b330-4348-86e8-d96597a54942" style="color:inherit;text-decoration:none;">Google Advanced Data Analytics Professional Certificate</a></span>
+      <span class="award-year">Mar 2026</span>
+    </div>
+    <div class="award-org">Coursera</div>
+  </div>
+
+  <!-- ══ LANGUAGES ══ -->
+  <div class="section">
+    <div class="section-title">Languages</div>
+    <hr/>
+    <div class="languages-row">English (Professional) &nbsp;•&nbsp; Telugu (Native) &nbsp;•&nbsp; Hindi (Fluent)</div>
+  </div>
+
+  <!-- ══ EDUCATION ══ -->
+  <div class="section">
+    <div class="section-title">Education</div>
+    <hr/>
+    <div class="edu-header">
+      <span class="edu-degree">Bachelor of Technology in Artificial Intelligence</span>
+      <span class="edu-year">2023</span>
+    </div>
+    <div class="edu-school">Anurag University • India</div>
+    <ul><li>Awarded full scholarship for 4 years based on academic performance.</li></ul>
+  </div>
+
+  <!-- ══ AWARDS ══ -->
+  <div class="section">
+    <div class="section-title">Awards &amp; Honors</div>
+    <hr/>
+    <div class="award-header">
+      <span class="award-title">Data Hack Hours — National Hackathon, 2nd Place</span>
+      <span class="award-year">2021</span>
+    </div>
+    <div class="award-org">Computer Science India</div>
+    <ul><li>Nationally ranked 2nd for "Safe Block" — a blockchain-based safety solution; awarded ₹7,000 prize.</li></ul>
+  </div>
+
+</div>
+</body>
+</html>

@@ -38,9 +38,11 @@ export async function POST(req: NextRequest) {
           if (step === 'classifying')     message = 'Detecting role type...';
           else if (step === 'classified') {
             const typeLabel: Record<string, string> = { ai_engineer: 'AI Engineer', data_analyst: 'Data Analyst', hybrid: 'Hybrid' };
+            const countryLabel: Record<string, string> = { de: 'Germany', nl: 'Netherlands', sg: 'Singapore', ae: 'UAE' };
             const label = typeLabel[(d?.type as string) ?? 'hybrid'] ?? 'Hybrid';
             const pct   = Math.round(((d?.confidence as number) ?? 0.7) * 100);
-            message = `${label} role (${pct}% confidence) — using ${label} base`;
+            const countryStr = d?.country ? ` · ${countryLabel[d.country as string] ?? ''} base` : '';
+            message = `${label} role (${pct}% confidence)${countryStr} — using ${label} base`;
           }
           else if (step === 'extracting')      message = 'Extracting ATS keywords from JD...';
           else if (step === 'keywords')   message = `Found ${d?.count ?? '?'} keywords`;

@@ -18,7 +18,7 @@ interface BulletChange {
 }
 
 type ResumeType = 'ai_engineer' | 'data_analyst' | 'hybrid';
-interface Classification { type: ResumeType; confidence: number; reasoning: string; }
+interface Classification { type: ResumeType; confidence: number; reasoning: string; country?: string | null; }
 const BASE_LABELS: Record<ResumeType, string> = { ai_engineer: 'AI Engineer', data_analyst: 'Data Analyst', hybrid: 'Hybrid' };
 const BASE_COLORS: Record<ResumeType, string> = { ai_engineer: '#6366f1', data_analyst: '#0ea5e9', hybrid: '#10b981' };
 
@@ -104,11 +104,21 @@ function ResultCard({ result, onView }: { result: TailorResult; onView: (r: Tail
           <div style={{ fontWeight: 600, fontSize: 14 }}>{result.company}</div>
           <div style={{ color: '#888', fontSize: 12, marginTop: 2 }}>{result.role}</div>
           {result.classification && (
-            <div style={{ marginTop: 5, display: 'flex', alignItems: 'center', gap: 6 }}>
+            <div style={{ marginTop: 5, display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
               <span style={{ background: BASE_COLORS[result.classification.type], color: '#fff', fontSize: 10, fontWeight: 600, padding: '2px 8px', borderRadius: 20 }}>
                 {BASE_LABELS[result.classification.type]} base
               </span>
               <span style={{ color: '#555', fontSize: 10 }}>{Math.round(result.classification.confidence * 100)}% confidence</span>
+              {result.classification?.country && (() => {
+                const countryLabel: Record<string, string> = { de: '🇩🇪 Germany', nl: '🇳🇱 Netherlands', sg: '🇸🇬 Singapore', ae: '🇦🇪 UAE' };
+                const countryColor: Record<string, string> = { de: '#2563eb', nl: '#f97316', sg: '#dc2626', ae: '#059669' };
+                const c = result.classification.country as string;
+                return (
+                  <span style={{ background: countryColor[c] + '22', color: countryColor[c], border: `1px solid ${countryColor[c]}44`, fontSize: 10, fontWeight: 600, padding: '2px 8px', borderRadius: 20 }}>
+                    {countryLabel[c]}
+                  </span>
+                );
+              })()}
             </div>
           )}
         </div>
