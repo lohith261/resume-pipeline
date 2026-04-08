@@ -87,22 +87,21 @@ const RESUME_FILES: Record<ResumeType, string> = {
   hybrid:       'resume_base.html',
 };
 
-const COUNTRY_RESUME_FILES: Record<CountryCode, string> = {
-  de: 'resume_germany.html',
-  nl: 'resume_netherlands.html',
-  sg: 'resume_singapore.html',
-  ae: 'resume_uae.html',
+const COUNTRY_RESUME_FILES: Record<CountryCode, Record<ResumeType, string>> = {
+  de: { ai_engineer: 'resume_de_engineer.html', hybrid: 'resume_de_hybrid.html', data_analyst: 'resume_de_analyst.html' },
+  nl: { ai_engineer: 'resume_nl_engineer.html', hybrid: 'resume_nl_hybrid.html', data_analyst: 'resume_nl_analyst.html' },
+  sg: { ai_engineer: 'resume_sg_engineer.html', hybrid: 'resume_sg_hybrid.html', data_analyst: 'resume_sg_analyst.html' },
+  ae: { ai_engineer: 'resume_ae_engineer.html', hybrid: 'resume_ae_hybrid.html', data_analyst: 'resume_ae_analyst.html' },
 };
 
 export function getBaseHtml(type: ResumeType = 'hybrid', country?: CountryCode | null): string {
-  // Country-specific base takes priority
   if (country && COUNTRY_RESUME_FILES[country]) {
-    const cp = path.join(process.cwd(), 'src', 'data', COUNTRY_RESUME_FILES[country]);
+    const file = COUNTRY_RESUME_FILES[country][type] ?? COUNTRY_RESUME_FILES[country]['hybrid'];
+    const cp = path.join(process.cwd(), 'src', 'data', file);
     if (fs.existsSync(cp)) return fs.readFileSync(cp, 'utf8');
   }
   const file = RESUME_FILES[type] ?? RESUME_FILES.hybrid;
   const p = path.join(process.cwd(), 'src', 'data', file);
-  if (!fs.existsSync(p)) return fs.readFileSync(path.join(process.cwd(), 'src', 'data', 'resume_base.html'), 'utf8');
   return fs.readFileSync(p, 'utf8');
 }
 
