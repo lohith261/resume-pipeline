@@ -244,6 +244,16 @@ export async function tailorHtml(
 ): Promise<string> {
   if (!missing.length) return baseHtml;
 
+  // Strip base64 image data before sending to LLM (re-injected after).
+  // Without this, a 33KB base64 string bloats the prompt and gets truncated.
+  const photoMap = new Map<string, string>();
+  let photoIdx = 0;
+  const htmlForLlm = baseHtml.replace(/src="data:image\/[^;]+;base64,[^"]+"/g, (match) => {
+    const token = `src="__PHOTO_${photoIdx++}__"`;
+    photoMap.set(token, match);
+    return token;
+  });
+
   const tailored = await groqLarge(
     'You are a professional resume tailoring assistant. Return ONLY the complete HTML — no explanation, no markdown fences.',
     `You are tailoring an HTML resume for a job application.
@@ -279,15 +289,21 @@ ${country === 'ae' ? `
 ${country === 'jp' ? `
 13. JAPAN MARKET: Preserve the photo placeholder, the Languages section (including Japanese language entry), and the visa sponsorship line in the header. Keep tone precise and factual — Japanese employers value concise, evidence-backed statements. Keep the education note about Engineer visa eligibility.` : ''}
 
-${compressHtml(baseHtml)}`,
+${compressHtml(htmlForLlm)}`,
     6000,
   );
 
-  return tailored
+  let result = tailored
     .replace(/^```(?:html)?\s*/m, '').replace(/\s*```$/m, '').trim()
     // Strip any <strong>/<b> tags the LLM added around keywords
     .replace(/<strong>([\s\S]*?)<\/strong>/gi, '$1')
     .replace(/<b>([\s\S]*?)<\/b>/gi, '$1');
+
+  // Re-inject base64 photo data that was stripped before sending to LLM
+  for (const [token, original] of photoMap) {
+    result = result.replace(token, original);
+  }
+  return result;
 }
 
 export async function runPipeline(
