@@ -44,6 +44,13 @@ export async function POST(req: NextRequest) {
             const countryStr = d?.country ? ` · ${countryLabel[d.country as string] ?? ''} base` : '';
             message = `${label} role (${pct}% confidence)${countryStr} — using ${label} base`;
           }
+          else if (step === 'base_selected') {
+            const typeLabel: Record<string, string> = { ai_engineer: 'AI Engineer', data_analyst: 'Data Analyst', hybrid: 'Hybrid' };
+            const countryLabel: Record<string, string> = { de: 'Germany 🇩🇪', nl: 'Netherlands 🇳🇱', sg: 'Singapore 🇸🇬', ae: 'UAE 🇦🇪' };
+            const roleStr    = typeLabel[(d?.type as string) ?? 'hybrid'] ?? 'Hybrid';
+            const countryStr = d?.country ? countryLabel[d.country as string] ?? '' : 'Global 🌐';
+            message = `Using ${roleStr} base · ${countryStr}`;
+          }
           else if (step === 'extracting')      message = 'Extracting ATS keywords from JD...';
           else if (step === 'keywords')   message = `Found ${d?.count ?? '?'} keywords`;
           else if (step === 'coverage_before') message = `Baseline coverage: ${d?.pct ?? '?'}%`;

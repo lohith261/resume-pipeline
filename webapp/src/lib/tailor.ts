@@ -308,6 +308,7 @@ export async function runPipeline(
   }
 
   const baseHtml = getBaseHtml(classification.type, classification.country);
+  onStep('base_selected', { type: classification.type, country: classification.country ?? null });
   const before = scoreCoverage(keywords, baseHtml);
   onStep('coverage_before', { pct: before.pct, missing: before.missing.length });
 
