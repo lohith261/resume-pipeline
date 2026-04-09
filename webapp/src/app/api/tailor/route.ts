@@ -38,7 +38,7 @@ export async function POST(req: NextRequest) {
           if (step === 'classifying')     message = 'Detecting role type...';
           else if (step === 'classified') {
             const typeLabel: Record<string, string> = { ai_engineer: 'AI Engineer', data_analyst: 'Data Analyst', hybrid: 'Hybrid' };
-            const countryLabel: Record<string, string> = { de: 'Germany', nl: 'Netherlands', sg: 'Singapore', ae: 'UAE' };
+            const countryLabel: Record<string, string> = { de: 'Germany', nl: 'Netherlands', sg: 'Singapore', ae: 'UAE', jp: 'Japan', lu: 'Luxembourg' };
             const label = typeLabel[(d?.type as string) ?? 'hybrid'] ?? 'Hybrid';
             const pct   = Math.round(((d?.confidence as number) ?? 0.7) * 100);
             const countryStr = d?.country ? ` · ${countryLabel[d.country as string] ?? ''} base` : '';
@@ -46,7 +46,7 @@ export async function POST(req: NextRequest) {
           }
           else if (step === 'base_selected') {
             const typeLabel: Record<string, string> = { ai_engineer: 'AI Engineer', data_analyst: 'Data Analyst', hybrid: 'Hybrid' };
-            const countryLabel: Record<string, string> = { de: 'Germany 🇩🇪', nl: 'Netherlands 🇳🇱', sg: 'Singapore 🇸🇬', ae: 'UAE 🇦🇪', jp: 'Japan 🇯🇵' };
+            const countryLabel: Record<string, string> = { de: 'Germany 🇩🇪', nl: 'Netherlands 🇳🇱', sg: 'Singapore 🇸🇬', ae: 'UAE 🇦🇪', jp: 'Japan 🇯🇵', lu: 'Luxembourg 🇱🇺 (DE base)' };
             const roleStr    = typeLabel[(d?.type as string) ?? 'hybrid'] ?? 'Hybrid';
             const countryStr = d?.country ? countryLabel[d.country as string] ?? '' : 'Global 🌐';
             message = `Using ${roleStr} base · ${countryStr}`;
