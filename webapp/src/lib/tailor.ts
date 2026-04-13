@@ -71,7 +71,7 @@ function slugify(text: string) {
   return text.toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_|_$/, '');
 }
 
-export type ResumeType = 'ai_engineer' | 'data_analyst' | 'hybrid';
+export type ResumeType = 'ai_engineer' | 'data_analyst' | 'data_engineer' | 'hybrid';
 export type CountryCode = 'de' | 'nl' | 'sg' | 'ae' | 'jp' | 'lu';
 
 export interface Classification {
@@ -82,19 +82,20 @@ export interface Classification {
 }
 
 const RESUME_FILES: Record<ResumeType, string> = {
-  ai_engineer:  'resume_ai_engineer.html',
-  data_analyst: 'resume_data_analyst.html',
-  hybrid:       'resume_base.html',
+  ai_engineer:   'resume_ai_engineer.html',
+  data_analyst:  'resume_data_analyst.html',
+  data_engineer: 'resume_data_engineer.html',
+  hybrid:        'resume_base.html',
 };
 
 const COUNTRY_RESUME_FILES: Record<CountryCode, Record<ResumeType, string>> = {
-  de: { ai_engineer: 'resume_de_engineer.html', hybrid: 'resume_de_hybrid.html', data_analyst: 'resume_de_analyst.html' },
-  nl: { ai_engineer: 'resume_nl_engineer.html', hybrid: 'resume_nl_hybrid.html', data_analyst: 'resume_nl_analyst.html' },
-  sg: { ai_engineer: 'resume_sg_engineer.html', hybrid: 'resume_sg_hybrid.html', data_analyst: 'resume_sg_analyst.html' },
-  ae: { ai_engineer: 'resume_ae_engineer.html', hybrid: 'resume_ae_hybrid.html', data_analyst: 'resume_ae_analyst.html' },
-  jp: { ai_engineer: 'resume_jp_engineer.html', hybrid: 'resume_jp_hybrid.html', data_analyst: 'resume_jp_analyst.html' },
+  de: { ai_engineer: 'resume_de_engineer.html', hybrid: 'resume_de_hybrid.html', data_analyst: 'resume_de_analyst.html', data_engineer: 'resume_de_data_engineer.html' },
+  nl: { ai_engineer: 'resume_nl_engineer.html', hybrid: 'resume_nl_hybrid.html', data_analyst: 'resume_nl_analyst.html', data_engineer: 'resume_nl_data_engineer.html' },
+  sg: { ai_engineer: 'resume_sg_engineer.html', hybrid: 'resume_sg_hybrid.html', data_analyst: 'resume_sg_analyst.html', data_engineer: 'resume_sg_data_engineer.html' },
+  ae: { ai_engineer: 'resume_ae_engineer.html', hybrid: 'resume_ae_hybrid.html', data_analyst: 'resume_ae_analyst.html', data_engineer: 'resume_ae_data_engineer.html' },
+  jp: { ai_engineer: 'resume_jp_engineer.html', hybrid: 'resume_jp_hybrid.html', data_analyst: 'resume_jp_analyst.html', data_engineer: 'resume_jp_data_engineer.html' },
   // Luxembourg: uses DE base (same EU Blue Card scheme, similar professional norms)
-  lu: { ai_engineer: 'resume_de_engineer.html', hybrid: 'resume_de_hybrid.html', data_analyst: 'resume_de_analyst.html' },
+  lu: { ai_engineer: 'resume_de_engineer.html', hybrid: 'resume_de_hybrid.html', data_analyst: 'resume_de_analyst.html', data_engineer: 'resume_de_data_engineer.html' },
 };
 
 export function getBaseHtml(type: ResumeType = 'hybrid', country?: CountryCode | null): string {
@@ -111,11 +112,12 @@ export function getBaseHtml(type: ResumeType = 'hybrid', country?: CountryCode |
 export async function classifyJd(jd: string): Promise<Classification> {
   const res = await groqFast(
     `Classify this job description. Return ONLY valid JSON (no markdown):
-{"type":"ai_engineer|data_analyst|hybrid","confidence":0.0-1.0,"reasoning":"one sentence","country":"de|nl|sg|ae|jp|lu|null"}
+{"type":"ai_engineer|data_analyst|data_engineer|hybrid","confidence":0.0-1.0,"reasoning":"one sentence","country":"de|nl|sg|ae|jp|lu|null"}
 
 type rules:
 - "ai_engineer" → primary focus on LLMs, RAG, LangChain, agents, GenAI, prompt engineering, inference
-- "data_analyst" → primary focus on SQL, Tableau, analytics, dashboards, BI, ETL, statistics, Python data science
+- "data_analyst" → primary focus on SQL, Tableau, Power BI, analytics, dashboards, BI, reporting, A/B testing, business intelligence
+- "data_engineer" → primary focus on pipelines, ETL/ELT, Airflow, Spark, Kafka, dbt, data warehouse, Redshift/Snowflake/BigQuery, schema design, data contracts, orchestration, data quality frameworks, data lakes
 - "hybrid" → requires both AI engineering AND strong data/analytics skills equally
 
 country rules (detect from location, company HQ, currency, office city, visa mentions):

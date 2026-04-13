@@ -17,10 +17,10 @@ interface BulletChange {
   after: string;
 }
 
-type ResumeType = 'ai_engineer' | 'data_analyst' | 'hybrid';
+type ResumeType = 'ai_engineer' | 'data_analyst' | 'data_engineer' | 'hybrid';
 interface Classification { type: ResumeType; confidence: number; reasoning: string; country?: string | null; }
-const BASE_LABELS: Record<ResumeType, string> = { ai_engineer: 'AI Engineer', data_analyst: 'Data Analyst', hybrid: 'Hybrid' };
-const BASE_COLORS: Record<ResumeType, string> = { ai_engineer: '#6366f1', data_analyst: '#0ea5e9', hybrid: '#10b981' };
+const BASE_LABELS: Record<ResumeType, string> = { ai_engineer: 'AI Engineer', data_analyst: 'Data Analyst', data_engineer: 'Data Engineer', hybrid: 'Hybrid' };
+const BASE_COLORS: Record<ResumeType, string> = { ai_engineer: '#6366f1', data_analyst: '#0ea5e9', data_engineer: '#10b981', hybrid: '#f59e0b' };
 
 interface TailorResult {
   company: string; role: string;
