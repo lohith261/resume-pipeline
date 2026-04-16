@@ -68,7 +68,7 @@ export function computeChanges(baseHtml: string, tailoredHtml: string): BulletCh
 }
 
 function slugify(text: string) {
-  return text.toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_|_$/, '');
+  return text.toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_+|_+$/g, '');
 }
 
 export type ResumeType = 'ai_engineer' | 'data_analyst' | 'data_engineer' | 'hybrid';
@@ -146,7 +146,7 @@ country rules (detect from location, company HQ, currency, office city, visa men
 }
 
 /** Normalize a string into a set of meaningful word tokens */
-function tokenize(s: string): Set<string> {
+export function tokenize(s: string): Set<string> {
   return new Set(
     s.toLowerCase()
      .replace(/[()[\]]/g, ' ')   // strip brackets so "(RAG)" → "RAG"
@@ -155,7 +155,7 @@ function tokenize(s: string): Set<string> {
   );
 }
 
-function kwMatches(kw: string, html: string): boolean {
+export function kwMatches(kw: string, html: string): boolean {
   // Fast path: direct substring match (handles the majority of cases instantly)
   if (new RegExp(kw.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'i').test(html)) return true;
 
@@ -199,7 +199,7 @@ export async function extractKeywords(jd: string): Promise<string[]> {
 }
 
 /** Remove near-duplicate keywords (e.g. "React" + "ReactJS") using 80% token overlap. */
-function deduplicateKeywords(keywords: string[]): string[] {
+export function deduplicateKeywords(keywords: string[]): string[] {
   const kept: string[] = [];
   for (const kw of keywords) {
     const kwToks = tokenize(kw);

@@ -32,3 +32,6 @@ jobs:
       - name: Lint
         run: npx next lint --max-warnings 0
         continue-on-error: true   # lint warnings won't fail the build, only errors will
+
+      - name: Unit tests
+        run: npm test
