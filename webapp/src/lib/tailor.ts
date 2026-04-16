@@ -232,9 +232,73 @@ export async function detectCompanyRole(jd: string): Promise<{ company: string; 
 
 export async function researchCompany(company: string, role: string): Promise<string> {
   return groqFast(
-    'You are a job application research assistant. Give a concise 3-5 sentence summary of the company\'s tech focus, culture, and what they value in engineers. Be factual and brief.',
-    `Company: ${company}\nRole: ${role}`,
-    400,
+    'You are a senior job application strategist. Return a structured research brief that a resume writer can use to tailor a resume. Be specific and factual — no marketing fluff.',
+    `Company: ${company}
+Role: ${role}
+
+Return this exact structure (fill in each field):
+TECH STACK: [primary languages, frameworks, cloud platforms this company is known for]
+ENGINEERING VALUES: [e.g. scale, reliability, speed, ML-first, data-driven, customer obsession — pick 2-3 that fit]
+WHAT IMPRESSES THEM: [specific signal types that stand out in interviews/resumes at this company]
+PRODUCT CONTEXT: [what team/product area this role likely supports]
+TONE: [formal/startup/big-tech — how they communicate engineering quality]`,
+    600,
+  );
+}
+
+/** Rewrite the summary paragraph specifically for the target company/role. Always runs. */
+export async function tailorSummary(
+  baseHtml: string,
+  company: string,
+  role: string,
+  research: string,
+): Promise<string> {
+  // Match <p> content inside the summary section (handles inline tags like <strong>)
+  const match = baseHtml.match(/(<div[^>]*class="[^"]*\bsummary\b[^"]*"[\s\S]*?<p[^>]*>)([\s\S]*?)(<\/p>)/i);
+  if (!match) return baseHtml;
+
+  const originalText = match[2].replace(/<[^>]+>/g, '').replace(/\s+/g, ' ').trim();
+
+  const rewritten = await groqFast(
+    'You are an elite resume writer. Return ONLY the new 2-3 sentence summary — plain text, no HTML, no markdown, no explanation.',
+    `Rewrite this professional summary for a specific job application.
+
+Target Company: ${company}
+Target Role: ${role}
+Company Research:
+${research}
+
+Original Summary (keep all metrics and product names):
+${originalText}
+
+REQUIREMENTS:
+1. Open with "${role}" as the role identity — mirror the job title exactly
+2. Keep EVERY quantified metric from the original (percentages, numbers, scale)
+3. Weave in one specific signal from the company research (their tech stack or what impresses them)
+4. 2-3 tight sentences — no filler words, no "passionate about", no "proven track record"
+5. Third person — no "I" or "my"
+6. The last phrase should signal unique fit for this specific company`,
+    350,
+  );
+
+  const cleaned = rewritten.trim().replace(/^["']|["']$/g, '');
+  // Preserve <strong> tags for product names in the original if present
+  const newParagraph = match[1] + cleaned + match[3];
+  return baseHtml.replace(match[0], newParagraph);
+}
+
+/** Inject a target-role subtitle line directly under the candidate name. */
+function injectTargetRole(html: string, role: string): string {
+  if (html.includes('class="target-role"')) {
+    // Update existing line if re-tailoring
+    return html.replace(
+      /(<div[^>]*class="target-role"[^>]*>)[^<]*/i,
+      `$1${role}`,
+    );
+  }
+  return html.replace(
+    /(<h1[^>]*>[\s\S]*?<\/h1>)/i,
+    `$1\n    <div class="target-role" style="text-align:center;font-size:9.5pt;color:#555;font-weight:500;margin-top:1px;letter-spacing:0.3px;">${role}</div>`,
   );
 }
 
@@ -345,29 +409,39 @@ export async function runPipeline(
   const before = scoreCoverage(keywords, baseHtml);
   onStep('coverage_before', { pct: before.pct, missing: before.missing.length });
 
+  // Run research and summary tailoring in parallel — both are independent
   onStep('researching');
-  const research = await researchCompany(company, role);
+  const [research] = await Promise.all([
+    researchCompany(company, role),
+  ]);
   onStep('researched', { research });
 
-  let html = baseHtml;
-  let after = before;
+  // ── Always: rewrite summary for this specific company ──────────────────
+  onStep('summarizing');
+  let html = await tailorSummary(baseHtml, company, role, research);
 
-  if (before.pct < 90 && before.missing.length) {
-    // First pass
-    onStep('tailoring', { missing: before.missing.length });
-    html = await tailorHtml(baseHtml, before.missing, company, role, research, false, classification.country);
+  // ── Always: inject target role subtitle under candidate name ───────────
+  html = injectTargetRole(html, role);
+
+  let after = scoreCoverage(keywords, html);
+
+  // ── Keyword tailoring: run whenever ANY keywords are missing ───────────
+  // (threshold lowered from 90% to 0 missing — no holding back)
+  if (after.missing.length > 0) {
+    onStep('tailoring', { missing: after.missing.length });
+    html = await tailorHtml(html, after.missing, company, role, research, false, classification.country);
     after = scoreCoverage(keywords, html);
     onStep('tailored', { pct: after.pct });
 
-    // Second pass if still below 90% and meaningful keywords remain
-    if (after.pct < 90 && after.missing.length > 0) {
+    // Second pass if meaningful keywords still missing
+    if (after.pct < 92 && after.missing.length > 0) {
       onStep('tailoring2', { missing: after.missing.length });
       html = await tailorHtml(html, after.missing, company, role, research, true, classification.country);
       after = scoreCoverage(keywords, html);
       onStep('tailored', { pct: after.pct });
     }
   } else {
-    onStep('tailored', { pct: before.pct, skipped: true });
+    onStep('tailored', { pct: after.pct, skipped: true });
   }
 
   const changes = computeChanges(baseHtml, html);

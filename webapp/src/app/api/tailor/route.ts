@@ -56,7 +56,6 @@ export async function POST(req: NextRequest) {
         const result = await runPipeline(jd, company, role, (step, data) => {
           const d = data as Record<string, unknown> | undefined;
           let message = step;
-          if (step === 'keywords' && (d as Record<string,unknown>)?.confirmed) message = `Using ${d?.count ?? '?'} confirmed keywords`;
           if (step === 'classifying')     message = 'Detecting role type...';
           else if (step === 'classified') {
             const typeLabel: Record<string, string> = { ai_engineer: 'AI Engineer', data_analyst: 'Data Analyst', data_engineer: 'Data Engineer', hybrid: 'Hybrid' };
@@ -74,13 +73,20 @@ export async function POST(req: NextRequest) {
             message = `Using ${roleStr} base · ${countryStr}`;
           }
           else if (step === 'extracting')      message = 'Extracting ATS keywords from JD...';
-          else if (step === 'keywords')   message = `Found ${d?.count ?? '?'} keywords`;
+          else if (step === 'keywords') {
+            message = (d as Record<string, unknown>)?.confirmed
+              ? `Using ${d?.count ?? '?'} confirmed keywords`
+              : `Found ${d?.count ?? '?'} keywords`;
+          }
           else if (step === 'coverage_before') message = `Baseline coverage: ${d?.pct ?? '?'}%`;
           else if (step === 'researching') message = `Researching ${company}...`;
-          else if (step === 'researched') message = 'Company research complete';
+          else if (step === 'researched') message = 'Research complete';
+          else if (step === 'summarizing') message = `Writing ${company}-specific summary...`;
           else if (step === 'tailoring')  message = `Weaving in ${d?.missing ?? '?'} missing keywords...`;
-          else if (step === 'tailoring2') message = `2nd pass — ${d?.missing ?? '?'} keywords still missing, trying again...`;
-          else if (step === 'tailored')   message = 'Tailoring complete';
+          else if (step === 'tailoring2') message = `2nd pass — ${d?.missing ?? '?'} keywords still missing...`;
+          else if (step === 'tailored')   message = (d as Record<string,unknown>)?.skipped
+            ? `Summary tailored · ${d?.pct ?? '?'}% coverage`
+            : `Tailoring complete · ${d?.pct ?? '?'}%`;
           else if (step === 'warn')       message = (d?.message as string) ?? '⚠ Warning';
           send('step', { id: step, message, data });
         }, Array.isArray(confirmedKeywords) && confirmedKeywords.length > 0 ? confirmedKeywords : undefined);
