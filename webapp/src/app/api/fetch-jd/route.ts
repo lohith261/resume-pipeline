@@ -27,9 +27,22 @@ async function fetchDirect(url: string): Promise<string> {
     .trim();
 }
 
+/** Reject private/internal URLs to prevent SSRF */
+function isSafeUrl(raw: string): boolean {
+  try {
+    const { protocol, hostname } = new URL(raw);
+    if (protocol !== 'http:' && protocol !== 'https:') return false;
+    // Block localhost variants and RFC-1918 / link-local ranges
+    if (/^(localhost|127\.|10\.|192\.168\.|172\.(1[6-9]|2\d|3[01])\.|169\.254\.|::1|0\.0\.0\.0)/i.test(hostname)) return false;
+    return true;
+  } catch { return false; }
+}
+
 export async function POST(req: NextRequest) {
-  const { url } = await req.json();
+  const body = await req.json().catch(() => null);
+  const url = typeof body?.url === 'string' ? body.url.trim() : '';
   if (!url) return NextResponse.json({ error: 'url required' }, { status: 400 });
+  if (!isSafeUrl(url)) return NextResponse.json({ error: 'Invalid or disallowed URL' }, { status: 400 });
 
   try {
     // Try Jina reader first (handles JS-rendered pages: Workday, Greenhouse, etc.)

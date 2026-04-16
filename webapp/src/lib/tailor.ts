@@ -44,7 +44,7 @@ function wordSim(a: string, b: string): number {
 }
 
 /** Diff base vs tailored bullets → list of changes */
-function computeChanges(baseHtml: string, tailoredHtml: string): BulletChange[] {
+export function computeChanges(baseHtml: string, tailoredHtml: string): BulletChange[] {
   const baseBullets = extractBullets(baseHtml);
   const tailoredBullets = extractBullets(tailoredHtml);
   const baseSet = new Set(baseBullets);

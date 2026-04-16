@@ -43,6 +43,7 @@ type Message =
   | { type: 'result';       result: TailorResult }
   | { type: 'answer';       text: string }
   | { type: 'edited';       summary: string }
+  | { type: 'pending-edit'; pendingHtml: string; changes: BulletChange[] }
   | { type: 'cover-letter'; company: string; role: string }
   | { type: 'error';        text: string };
 
@@ -702,15 +703,9 @@ export default function Home() {
         });
         const d = await r.json();
         if (d.error) throw new Error(d.error);
-        // Save snapshot to undo history before applying change
-        setHtmlHistory(prev => [...prev, activeResult.html]);
-        const updatedResult = { ...activeResult, html: d.html };
-        setPreview(updatedResult);
-        // Also update the result card in messages so future edits use latest HTML
-        setMessages(prev => prev.map(m => m.type === 'result' && m.result === activeResult
-          ? { ...m, result: updatedResult } : m));
+        // Show diff preview — user must click Apply to commit
         setMessages(prev => prev.map((m, i) => i === thinkingIdx
-          ? { type: 'edited' as const, summary: 'Done! Resume updated — check the preview.' } : m));
+          ? { type: 'pending-edit' as const, pendingHtml: d.html, changes: d.changes ?? [] } : m));
       } catch (e) {
         setMessages(prev => prev.map((m, i) => i === thinkingIdx ? { type: 'error' as const, text: String(e) } : m));
       }
@@ -851,6 +846,25 @@ export default function Home() {
     setLoading(false);
   }
 
+  function applyEdit(msgIdx: number, newHtml: string) {
+    const activeResult = preview ?? (messages.slice().reverse().find(m => m.type === 'result') as { type: 'result'; result: TailorResult } | undefined)?.result;
+    if (!activeResult) return;
+    setHtmlHistory(prev => [...prev, activeResult.html]);
+    const updatedResult = { ...activeResult, html: newHtml };
+    setPreview(updatedResult);
+    setMessages(prev => prev.map((m, i) => {
+      if (i === msgIdx) return { type: 'edited' as const, summary: 'Done! Resume updated — check the preview.' };
+      if (m.type === 'result' && m.result === activeResult) return { ...m, result: updatedResult };
+      return m;
+    }));
+  }
+
+  function discardEdit(msgIdx: number) {
+    setMessages(prev => prev.map((m, i) =>
+      i === msgIdx ? { type: 'edited' as const, summary: 'Edit discarded.' } : m
+    ));
+  }
+
   async function handleRetry() {
     if (!lastJd || loading) return;
     setLoading(true);
@@ -987,6 +1001,54 @@ export default function Home() {
                   </div>
                 </div>
               )}
+              {m.type === 'pending-edit' && (() => {
+                const pe = m;
+                const modified = pe.changes.filter(c => c.type === 'modified');
+                const added    = pe.changes.filter(c => c.type === 'added');
+                return (
+                  <div style={{ display: 'flex', gap: 9 }}>
+                    <div style={{ width: 26, height: 26, borderRadius: '50%', background: '#1a1a2e', border: '1px solid #252540', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, flexShrink: 0, marginTop: 1 }}>✦</div>
+                    <div style={{ background: '#0d1520', border: '1px solid #1e2a40', borderRadius: '3px 12px 12px 12px', padding: '12px 14px', fontSize: 13, maxWidth: '92%' }}>
+                      <div style={{ color: '#a0b4ff', fontWeight: 600, marginBottom: 8 }}>
+                        ✏️ Review changes — {modified.length} modified{added.length > 0 ? `, ${added.length} added` : ''}
+                      </div>
+                      {pe.changes.length === 0 && (
+                        <div style={{ color: '#555', fontSize: 12, marginBottom: 10 }}>No bullet-level changes detected (structural edit).</div>
+                      )}
+                      {pe.changes.length > 0 && (
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 10 }}>
+                          {modified.map((c, ci) => (
+                            <div key={`m${ci}`} style={{ background: '#111', borderRadius: 6, padding: '8px 10px', fontSize: 11, lineHeight: 1.5 }}>
+                              <div style={{ color: '#666', textDecoration: 'line-through', marginBottom: 4 }}>{c.before}</div>
+                              <div style={{ color: '#4ade80' }}>↳ {c.after}</div>
+                            </div>
+                          ))}
+                          {added.map((c, ci) => (
+                            <div key={`a${ci}`} style={{ background: '#0a1020', border: '1px solid #1a2a4a', borderRadius: 6, padding: '8px 10px', fontSize: 11, lineHeight: 1.5 }}>
+                              <span style={{ color: '#6366f1', marginRight: 5 }}>+</span>
+                              <span style={{ color: '#a0b4ff' }}>{c.after}</span>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                      <div style={{ display: 'flex', gap: 8 }}>
+                        <button
+                          onClick={() => applyEdit(i, pe.pendingHtml)}
+                          style={{ background: '#22c55e', color: '#000', border: 'none', borderRadius: 6, padding: '5px 14px', fontSize: 12, fontWeight: 700, cursor: 'pointer' }}
+                        >
+                          ✓ Apply
+                        </button>
+                        <button
+                          onClick={() => discardEdit(i)}
+                          style={{ background: '#1a1a1a', color: '#888', border: '1px solid #333', borderRadius: 6, padding: '5px 12px', fontSize: 12, cursor: 'pointer' }}
+                        >
+                          ✕ Discard
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })()}
               {m.type === 'answer' && (
                 <div style={{ display: 'flex', gap: 9 }}>
                   <div style={{ width: 26, height: 26, borderRadius: '50%', background: '#1a1a2e', border: '1px solid #252540', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, flexShrink: 0, marginTop: 1 }}>✦</div>

@@ -27,8 +27,17 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  const { jd, company: companyHint, role: roleHint, confirmedKeywords } = await req.json();
-  if (!jd) return new Response('jd required', { status: 400 });
+  const body = await req.json().catch(() => null);
+  const jd              = typeof body?.jd === 'string' ? body.jd.trim() : '';
+  const companyHint     = typeof body?.company === 'string' ? body.company.trim() : undefined;
+  const roleHint        = typeof body?.role === 'string'    ? body.role.trim()    : undefined;
+  const confirmedKeywords: string[] | undefined =
+    Array.isArray(body?.confirmedKeywords)
+      ? (body.confirmedKeywords as unknown[]).filter((k): k is string => typeof k === 'string').slice(0, 120)
+      : undefined;
+
+  if (!jd) return new Response(JSON.stringify({ error: 'jd required' }), { status: 400, headers: { 'Content-Type': 'application/json' } });
+  if (jd.length > 50_000) return new Response(JSON.stringify({ error: 'jd too long (max 50 000 chars)' }), { status: 400, headers: { 'Content-Type': 'application/json' } });
 
   const encoder = new TextEncoder();
 
