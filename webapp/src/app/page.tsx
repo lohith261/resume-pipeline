@@ -277,6 +277,26 @@ function PreviewPanel({ result, coverLetterHtml, initialTab = 'resume', onClose,
     win.addEventListener('load', () => { win.focus(); win.print(); }, { once: true });
   }
 
+  async function handleDownloadDocx() {
+    try {
+      const res = await fetch('/api/docx', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ html: activeHtml }),
+      });
+      if (!res.ok) throw new Error('DOCX generation failed');
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `${getSlug()}.docx`;
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch {
+      alert('DOCX download failed — try PDF instead');
+    }
+  }
+
   function handleDownloadTxt() {
     const slug = getSlug();
 
@@ -426,6 +446,9 @@ function PreviewPanel({ result, coverLetterHtml, initialTab = 'resume', onClose,
           {tab !== 'interview' && <>
             <button onClick={handleDownload} style={{ background: '#6366f1', color: '#fff', border: 'none', borderRadius: 8, padding: '7px 14px', fontSize: 13, fontWeight: 500, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6 }}>
               <Download size={13} /> PDF
+            </button>
+            <button onClick={handleDownloadDocx} title="Word document — highest ATS compatibility" style={{ background: '#1e3a5f', color: '#93c5fd', border: '1px solid #1d4ed8', borderRadius: 8, padding: '7px 14px', fontSize: 13, fontWeight: 500, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6 }}>
+              <Download size={13} /> DOCX
             </button>
             <button onClick={handleDownloadTxt} title="Plain text — best for Workday / ATS form parsing" style={{ background: '#1e293b', color: '#86efac', border: '1px solid #166534', borderRadius: 8, padding: '7px 14px', fontSize: 13, fontWeight: 500, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6 }}>
               <Download size={13} /> TXT

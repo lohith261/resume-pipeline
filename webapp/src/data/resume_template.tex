@@ -1,0 +1,178 @@
+%─────────────────────────────────────────────────────────────────────────────
+%  Bandreddy Sri Sai Lohith — Resume Template (Overleaf / pdfLaTeX)
+%
+%  HOW TO USE
+%  1. Upload this file to https://overleaf.com  → New Project → Upload
+%  2. Paste the AI-tailored bullet text from Job Tailor into the relevant
+%     \item blocks below (replace the placeholder text)
+%  3. Click "Recompile" → Download PDF
+%
+%  ATS NOTE: This template produces a tagged, linear-text PDF that parses
+%  cleanly in Workday, Greenhouse, Lever, iCIMS, and Taleo.
+%─────────────────────────────────────────────────────────────────────────────
+
+\documentclass[10pt, letterpaper]{article}
+
+%─── Packages ────────────────────────────────────────────────────────────────
+\usepackage[
+  top=0.5in, bottom=0.5in,
+  left=0.65in, right=0.65in
+]{geometry}
+\usepackage{hyperref}
+\usepackage{enumitem}
+\usepackage{titlesec}
+\usepackage{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage{microtype}
+\usepackage{xcolor}
+
+%─── Hyperlink style ─────────────────────────────────────────────────────────
+\hypersetup{
+  colorlinks=true,
+  urlcolor=black,
+  linkcolor=black,
+  hidelinks
+}
+
+%─── Typography ──────────────────────────────────────────────────────────────
+\pagestyle{empty}
+\setlength{\parindent}{0pt}
+\setlength{\parskip}{0pt}
+
+%─── Section title style ─────────────────────────────────────────────────────
+\titleformat{\section}
+  {\vspace{4pt}\scshape\raggedright\large\bfseries}
+  {}{0em}{}
+  [\color{black}\titlerule\vspace{2pt}]
+
+\titlespacing*{\section}{0pt}{6pt}{4pt}
+
+%─── Bullet list style ───────────────────────────────────────────────────────
+\setlist[itemize]{
+  leftmargin=0.18in,
+  label=\textbullet,
+  itemsep=1pt,
+  parsep=0pt,
+  topsep=2pt,
+}
+
+%─── Custom commands ─────────────────────────────────────────────────────────
+
+% Job / Project entry header
+% Usage: \resumeEntry{Title}{Company or Links}{Date}
+\newcommand{\resumeEntry}[3]{%
+  \vspace{4pt}%
+  \textbf{#1} \hfill #3 \\
+  \textit{\small #2}%
+  \vspace{1pt}%
+}
+
+% Skills row
+% Usage: \skillrow{Category}{skills, comma, separated}
+\newcommand{\skillrow}[2]{%
+  \textbf{#1:} #2 \\[1pt]%
+}
+
+%─────────────────────────────────────────────────────────────────────────────
+\begin{document}
+
+%─── HEADER ──────────────────────────────────────────────────────────────────
+\begin{center}
+  {\Huge\bfseries Bandreddy Sri Sai Lohith}\\[4pt]
+  \small
+  \href{mailto:bandreddysrisailohith@gmail.com}{bandreddysrisailohith@gmail.com}
+  $\vert$\;
+  +91 8688457071
+  $\vert$\;
+  \href{https://linkedin.com/in/srisailohith}{linkedin.com/in/srisailohith}
+  $\vert$\;
+  \href{https://github.com/lohith261}{github.com/lohith261}
+  $\vert$\;
+  \href{https://jobtailor.in}{jobtailor.in}
+\end{center}
+
+%─── SUMMARY ─────────────────────────────────────────────────────────────────
+\section{Summary}
+
+%  ↓ PASTE AI-TAILORED SUMMARY HERE — keep to 2–3 lines
+AI Engineer with 2+ years at ADP — architected LLM/RAG risk detection processing
+10K+ audit cases/month across 1M+ payroll records (40\% effort reduction), with
+LangChain agents at 80\% classification precision and 25\% fewer false positives.
+Independently shipped two production AI products — \textbf{Job Tailor} (jobtailor.in)
+and \textbf{Keen} — end-to-end; stack spans LangChain, RAG, AWS Bedrock/OpenAI/Groq,
+React/TypeScript, and Node.js/Python.
+
+%─── SKILLS ──────────────────────────────────────────────────────────────────
+\section{Skills}
+
+%  ↓ REORDER rows to match the JD — ATS weights first-listed categories higher
+\skillrow{AI / ML \& GenAI}{LLMs, RAG Architectures, LangChain, Groq API, OpenAI API, AWS Bedrock, Vector Search/Embeddings, NLP, Sentiment Analysis, Prompt Engineering, Model Evaluation, Anomaly Detection, Risk Scoring}
+\skillrow{Backend}{Java, Spring Boot, Spring Cloud (Config, Gateway, Circuit Breaker), J2EE, Hibernate, Node.js, Express.js, Python, RESTful APIs, SOAP (JAX-WS, JAX-RS)}
+\skillrow{Frontend}{React, Next.js 14, Angular, TypeScript, JavaScript, Redux, RxJS, Tailwind CSS, HTML5, CSS3, WebSockets, WCAG 2.1}
+\skillrow{Cloud \& DevOps}{AWS (Lambda, Step Functions, DynamoDB, RDS, Glue, IAM, CloudWatch, Amazon Connect), Pivotal Cloud Foundry, Docker, CI/CD (Jenkins, GitHub Actions), Vercel}
+\skillrow{Databases \& Auth}{PostgreSQL, MySQL, DynamoDB, Supabase, Prisma v5, NextAuth.js, SQL}
+\skillrow{Tools \& Practices}{Git, Agile/Scrum, Sentry, Resend, Puppeteer, Jira, Code Reviews, SDLC}
+
+%─── EXPERIENCE ──────────────────────────────────────────────────────────────
+\section{Experience}
+
+\resumeEntry{AI Engineer \& Software Engineer}{ADP}{Sep 2023 -- Present}
+\begin{itemize}
+  %  ↓ PASTE AI-TAILORED BULLETS HERE — replace each \item line
+  \item Architected LLM/RAG risk detection system processing 10K+ audit cases/month across 1M+ employee records — reducing manual audit effort by 40\%.
+  \item Engineered LangChain investigation agents to automate root-cause analysis across payroll anomalies; improved classification precision to 80\% and cut false positives by 25\%.
+  \item Integrated AWS Bedrock and OpenAI into production HR automation workflows, improving operational efficiency 30\% and reducing resolution time 25\%.
+  \item Built RAG pipelines ingesting IRS codes and state labor laws alongside structured payroll data; automated classification and generated audit trails for every flagged case.
+  \item Architected Node.js/Express microservices orchestrating LLM inference pipelines, handling 10{,}000+ daily API calls at $<$200 ms latency via connection pooling and caching.
+  \item Deployed on AWS (Lambda, Step Functions, DynamoDB, RDS, Glue) and Pivotal Cloud Foundry; cut infrastructure costs 40\% and eliminated 15+ hours of manual testing weekly.
+  \item Engineered React and Angular/TypeScript dashboards for real-time risk visualization; improved Time-to-Interactive by 1.2 seconds and page performance by 35\%.
+  \item Engineered scalable Java Spring Boot microservices with Spring Cloud for high-availability payroll systems; built SOAP/RESTful APIs for legacy system integration.
+\end{itemize}
+
+%─── PROJECTS ────────────────────────────────────────────────────────────────
+\section{Projects}
+
+\resumeEntry{Job Tailor}{\href{https://github.com/lohith261/CustomJobFinder}{github.com/lohith261/CustomJobFinder} \quad\textbullet\quad \href{https://jobtailor.in}{jobtailor.in}}{2025 -- Present}
+\begin{itemize}
+  \item Architected and shipped AI job application SaaS end-to-end as sole engineer — Next.js 14, TypeScript, PostgreSQL/Supabase, Vercel — serving Indian job seekers across 5 integrated job platforms.
+  \item Engineered real-time job aggregation pipeline across Naukri, Indeed India, Internshala, Adzuna, and RemoteOK; Groq AI scores each opportunity by fit with ranked breakdown, cutting 100s of listings to a personalised shortlist instantly.
+  \item Shipped AI resume tailoring pipeline (PDF $\to$ ATS keyword gap analysis $\to$ LLM bullet rewrite $\to$ cover letter $\to$ cold outreach) achieving 85\%+ keyword coverage on tailored outputs.
+\end{itemize}
+
+\vspace{4pt}
+\resumeEntry{Keen — AI Due Diligence Platform}{\href{https://github.com/lohith261/keen}{github.com/lohith261/keen} \quad\textbullet\quad \href{https://keen-sigma.vercel.app}{keen-sigma.vercel.app}}{2024}
+\begin{itemize}
+  \item Architected multi-agent due diligence automation platform for PE firms — research agents integrate Salesforce, NetSuite, SEC EDGAR, HubSpot, and Crunchbase; TinyFish browser automation accesses locked platforms with real-time pipeline monitoring and pause/resume without progress loss.
+  \item Engineered Claude AI analysis layer that cross-references aggregated business data to surface revenue mismatches, audit red flags, and risk discrepancies; exports reports as PDF, Excel, or Google Sheets. Stack: React/TypeScript (Vercel) + Python 3.11 (Fly.io) + Supabase + Redis.
+\end{itemize}
+
+%─── EDUCATION ───────────────────────────────────────────────────────────────
+\section{Education}
+
+\resumeEntry{Bachelor of Technology in Artificial Intelligence}{Anurag University, India}{2023}
+\begin{itemize}
+  \item Awarded full scholarship for 4 years based on academic performance.
+\end{itemize}
+
+%─── AWARDS ──────────────────────────────────────────────────────────────────
+\section{Awards \& Honors}
+
+\resumeEntry{Data Hack Hours — National Hackathon, 2nd Place}{Computer Science India}{2021}
+\begin{itemize}
+  \item Nationally ranked 2nd for ``Safe Block'' — a blockchain-based safety solution; awarded ₹7,000 prize.
+\end{itemize}
+
+%─── CERTIFICATIONS ──────────────────────────────────────────────────────────
+\section{Certifications}
+
+\textbf{\href{https://www.credly.com/earner/earned/badge/098cfd98-fe08-4a87-8a30-cdb4810b7c91}{Google AI Professional Certificate}} \hfill Mar 2026 \\
+\textit{Coursera}\\[4pt]
+
+\textbf{\href{https://www.credly.com/earner/earned/badge/e3f50e0d-b330-4348-86e8-d96597a54942}{Google Advanced Data Analytics Professional Certificate}} \hfill Mar 2026 \\
+\textit{Coursera}\\[4pt]
+
+\textbf{\href{https://www.credly.com/badges/05f8d11e-1575-4122-a755-877c72bd70e0/public_url}{IBM Data Engineering Essentials}} \hfill Apr 2026 \\
+\textit{IBM}
+
+%─────────────────────────────────────────────────────────────────────────────
+\end{document}
