@@ -316,6 +316,7 @@ export async function runPipeline(
   company: string,
   role: string,
   onStep: (step: string, data?: unknown) => void,
+  confirmedKeywords?: string[],
 ): Promise<TailorResult> {
   onStep('classifying');
   const classification = await classifyJd(jd);
@@ -325,11 +326,18 @@ export async function runPipeline(
     onStep('warn', { id: 'warn_classify', message: '⚠ Classification uncertain — using Hybrid base as fallback' });
   }
 
-  onStep('extracting');
-  const keywords = await extractKeywords(jd);
-  onStep('keywords', { count: keywords.length, keywords });
-  if (keywords.length === 0) {
-    onStep('warn', { id: 'warn_keywords', message: '⚠ No keywords extracted — JD may be too short or in an unexpected format' });
+  let keywords: string[];
+  if (confirmedKeywords && confirmedKeywords.length > 0) {
+    // User confirmed (possibly edited) keyword set — skip LLM extraction
+    keywords = confirmedKeywords;
+    onStep('keywords', { count: keywords.length, keywords, confirmed: true });
+  } else {
+    onStep('extracting');
+    keywords = await extractKeywords(jd);
+    onStep('keywords', { count: keywords.length, keywords });
+    if (keywords.length === 0) {
+      onStep('warn', { id: 'warn_keywords', message: '⚠ No keywords extracted — JD may be too short or in an unexpected format' });
+    }
   }
 
   const baseHtml = getBaseHtml(classification.type, classification.country);

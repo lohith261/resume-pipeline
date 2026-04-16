@@ -4,8 +4,29 @@ import { put } from '@vercel/blob';
 
 export const maxDuration = 300;
 
+// ── Simple in-memory rate limiter (sliding window, per IP) ───────────────────
+const ipLog = new Map<string, number[]>();
+const RATE_WINDOW_MS = 60_000;   // 1 minute
+const RATE_MAX       = 8;        // max 8 tailor requests per minute per IP
+
+function isRateLimited(ip: string): boolean {
+  const now  = Date.now();
+  const prev = (ipLog.get(ip) ?? []).filter(t => now - t < RATE_WINDOW_MS);
+  if (prev.length >= RATE_MAX) return true;
+  ipLog.set(ip, [...prev, now]);
+  return false;
+}
+
 export async function POST(req: NextRequest) {
-  const { jd, company: companyHint, role: roleHint } = await req.json();
+  const ip = req.headers.get('x-forwarded-for')?.split(',')[0].trim() ?? 'unknown';
+  if (isRateLimited(ip)) {
+    return new Response(
+      JSON.stringify({ error: 'Too many requests — please wait a minute before trying again.' }),
+      { status: 429, headers: { 'Content-Type': 'application/json', 'Retry-After': '60' } }
+    );
+  }
+
+  const { jd, company: companyHint, role: roleHint, confirmedKeywords } = await req.json();
   if (!jd) return new Response('jd required', { status: 400 });
 
   const encoder = new TextEncoder();
@@ -35,6 +56,7 @@ export async function POST(req: NextRequest) {
         const result = await runPipeline(jd, company, role, (step, data) => {
           const d = data as Record<string, unknown> | undefined;
           let message = step;
+          if (step === 'keywords' && (d as Record<string,unknown>)?.confirmed) message = `Using ${d?.count ?? '?'} confirmed keywords`;
           if (step === 'classifying')     message = 'Detecting role type...';
           else if (step === 'classified') {
             const typeLabel: Record<string, string> = { ai_engineer: 'AI Engineer', data_analyst: 'Data Analyst', data_engineer: 'Data Engineer', hybrid: 'Hybrid' };
@@ -61,7 +83,7 @@ export async function POST(req: NextRequest) {
           else if (step === 'tailored')   message = 'Tailoring complete';
           else if (step === 'warn')       message = (d?.message as string) ?? '⚠ Warning';
           send('step', { id: step, message, data });
-        });
+        }, Array.isArray(confirmedKeywords) && confirmedKeywords.length > 0 ? confirmedKeywords : undefined);
 
         // Inject <base> tag so relative asset URLs (e.g. /photo_professional.jpg)
         // resolve to the app origin even when HTML is served from Vercel Blob CDN.

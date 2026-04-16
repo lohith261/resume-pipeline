@@ -83,9 +83,12 @@ function StepsList({ steps }: { steps: Step[] }) {
   );
 }
 
-function ResultCard({ result, onView }: { result: TailorResult; onView: (r: TailorResult) => void }) {
+function ResultCard({ result, onView, onRetailor }: { result: TailorResult; onView: (r: TailorResult) => void; onRetailor?: (kws: string[]) => void }) {
   const [kwExpanded, setKwExpanded]       = useState(false);
   const [changesExpanded, setChangesExpanded] = useState(false);
+  const [editingKw, setEditingKw]         = useState(false);
+  const [editedKws, setEditedKws]         = useState<string[]>([]);
+  const [newKwInput, setNewKwInput]       = useState('');
   const PREVIEW = 5;
   const covered = result.after.covered;
   const missing = result.after.missing;
@@ -142,28 +145,75 @@ function ResultCard({ result, onView }: { result: TailorResult; onView: (r: Tail
 
       {/* Keywords */}
       <div style={{ marginBottom: 12 }}>
-        <div style={{ display: 'flex', gap: 10, marginBottom: 6 }}>
-          <span style={{ fontSize: 11, color: '#4ade80' }}>✓ {covered.length} present</span>
-          <span style={{ fontSize: 11, color: '#f87171' }}>✗ {missing.length} missing</span>
-        </div>
-        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>
-          {shownCovered.map((kw, i) => (
-            <span key={`c${i}`} style={{ background: '#0a1f12', color: '#4ade80', border: '1px solid #1a4a2a', borderRadius: 4, padding: '1px 7px', fontSize: 11 }}>{kw}</span>
-          ))}
-          {shownMissing.map((kw, i) => (
-            <span key={`m${i}`} style={{ background: '#2a1212', color: '#f87171', border: '1px solid #3d1515', borderRadius: 4, padding: '1px 7px', fontSize: 11 }}>{kw}</span>
-          ))}
-          {!kwExpanded && hiddenCount > 0 && (
-            <button onClick={() => setKwExpanded(true)} style={{ background: 'transparent', border: '1px solid #2a2a2a', color: '#555', borderRadius: 4, padding: '1px 7px', fontSize: 11, cursor: 'pointer' }}>
-              +{hiddenCount} more
-            </button>
-          )}
-          {kwExpanded && (
-            <button onClick={() => setKwExpanded(false)} style={{ background: 'transparent', border: '1px solid #2a2a2a', color: '#555', borderRadius: 4, padding: '1px 7px', fontSize: 11, cursor: 'pointer' }}>
-              show less
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
+          <div style={{ display: 'flex', gap: 10 }}>
+            <span style={{ fontSize: 11, color: '#4ade80' }}>✓ {covered.length} present</span>
+            <span style={{ fontSize: 11, color: '#f87171' }}>✗ {missing.length} missing</span>
+          </div>
+          {onRetailor && !editingKw && (
+            <button
+              onClick={() => { setEditedKws(result.keywords); setEditingKw(true); }}
+              style={{ background: 'transparent', border: '1px solid #2a3a5a', color: '#60a5fa', borderRadius: 4, padding: '1px 8px', fontSize: 10, cursor: 'pointer' }}
+            >
+              ✏️ Edit keywords
             </button>
           )}
         </div>
+
+        {editingKw ? (
+          <div>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4, marginBottom: 6 }}>
+              {editedKws.map((kw, i) => (
+                <span key={i} style={{ background: '#1a2040', color: '#a0b4ff', border: '1px solid #2a3a6a', borderRadius: 4, padding: '1px 4px 1px 7px', fontSize: 11, display: 'flex', alignItems: 'center', gap: 4 }}>
+                  {kw}
+                  <button onClick={() => setEditedKws(p => p.filter((_, j) => j !== i))} style={{ background: 'transparent', border: 'none', color: '#666', cursor: 'pointer', padding: '0 2px', lineHeight: 1, fontSize: 13 }}>×</button>
+                </span>
+              ))}
+            </div>
+            <div style={{ display: 'flex', gap: 4, marginBottom: 6 }}>
+              <input
+                value={newKwInput}
+                onChange={e => setNewKwInput(e.target.value)}
+                onKeyDown={e => { if ((e.key === 'Enter' || e.key === ',') && newKwInput.trim()) { e.preventDefault(); setEditedKws(p => [...p, newKwInput.trim()]); setNewKwInput(''); } }}
+                placeholder="Add keyword, press Enter"
+                style={{ flex: 1, background: '#111', border: '1px solid #2a2a2a', color: '#e8e8e8', borderRadius: 4, padding: '3px 8px', fontSize: 11 }}
+              />
+            </div>
+            <div style={{ display: 'flex', gap: 6 }}>
+              <button
+                onClick={() => { onRetailor!(editedKws); setEditingKw(false); }}
+                style={{ flex: 1, background: '#6366f1', color: '#fff', border: 'none', borderRadius: 6, padding: '5px 10px', fontSize: 12, fontWeight: 600, cursor: 'pointer' }}
+              >
+                ↺ Re-tailor with these keywords
+              </button>
+              <button
+                onClick={() => setEditingKw(false)}
+                style={{ background: '#1a1a1a', border: '1px solid #333', color: '#666', borderRadius: 6, padding: '5px 10px', fontSize: 12, cursor: 'pointer' }}
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        ) : (
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>
+            {shownCovered.map((kw, i) => (
+              <span key={`c${i}`} style={{ background: '#0a1f12', color: '#4ade80', border: '1px solid #1a4a2a', borderRadius: 4, padding: '1px 7px', fontSize: 11 }}>{kw}</span>
+            ))}
+            {shownMissing.map((kw, i) => (
+              <span key={`m${i}`} style={{ background: '#2a1212', color: '#f87171', border: '1px solid #3d1515', borderRadius: 4, padding: '1px 7px', fontSize: 11 }}>{kw}</span>
+            ))}
+            {!kwExpanded && hiddenCount > 0 && (
+              <button onClick={() => setKwExpanded(true)} style={{ background: 'transparent', border: '1px solid #2a2a2a', color: '#555', borderRadius: 4, padding: '1px 7px', fontSize: 11, cursor: 'pointer' }}>
+                +{hiddenCount} more
+              </button>
+            )}
+            {kwExpanded && (
+              <button onClick={() => setKwExpanded(false)} style={{ background: 'transparent', border: '1px solid #2a2a2a', color: '#555', borderRadius: 4, padding: '1px 7px', fontSize: 11, cursor: 'pointer' }}>
+                show less
+              </button>
+            )}
+          </div>
+        )}
       </div>
 
       {/* Changes diff */}
@@ -535,6 +585,7 @@ export default function Home() {
   const [coverLetterHtml, setCoverLetterHtml] = useState<string | null>(null);
   const [previewInitialTab, setPreviewInitialTab] = useState<'resume' | 'cover'>('resume');
   const [htmlHistory, setHtmlHistory]   = useState<string[]>([]);
+  const [lastJd, setLastJd]             = useState<string>('');
   const bottomRef                       = useRef<HTMLDivElement>(null);
   const textareaRef                     = useRef<HTMLTextAreaElement>(null);
   const fileInputRef                    = useRef<HTMLInputElement>(null);
@@ -666,6 +717,8 @@ export default function Home() {
       }
     }
 
+    setLastJd(jd); // remember for keyword re-tailor
+
     try {
       const res = await fetch('/api/tailor', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ jd }) });
       const reader = res.body!.getReader();
@@ -691,6 +744,58 @@ export default function Home() {
             setMessages(prev => [...prev, { type: 'result', result: data as TailorResult }]);
             setPreview(data as TailorResult);
             setHtmlHistory([]); // fresh tailor clears undo history
+          }
+          if (event === 'error') {
+            setMessages(prev => prev.map((m, i) => i === thinkingIdx ? { type: 'error', text: data.message } : m));
+          }
+        }
+      }
+    } catch (e) {
+      setMessages(prev => prev.map((m, i) => i === thinkingIdx ? { type: 'error', text: String(e) } : m));
+    }
+    setLoading(false);
+  }
+
+  async function handleRetailor(confirmedKeywords: string[]) {
+    if (!lastJd || loading) return;
+    setLoading(true);
+    const thinkingIdx = messages.length;
+    setMessages(prev => [...prev, { type: 'thinking', steps: [{ id: 'retailor', message: `Re-tailoring with ${confirmedKeywords.length} keywords...`, done: false }] }]);
+
+    const addStep = (step: Step) => setMessages(prev => prev.map((m, i) => {
+      if (i !== thinkingIdx || m.type !== 'thinking') return m;
+      const exists = m.steps.find(s => s.id === step.id);
+      if (exists) return { ...m, steps: m.steps.map(s => s.id === step.id ? { ...s, done: true } : s) };
+      return { ...m, steps: [...m.steps, step] };
+    }));
+
+    try {
+      const res = await fetch('/api/tailor', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ jd: lastJd, confirmedKeywords }),
+      });
+      const reader = res.body!.getReader();
+      const decoder = new TextDecoder();
+      let buf = '';
+      let event = '';
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        buf += decoder.decode(value, { stream: true });
+        const lines = buf.split('\n');
+        buf = lines.pop() ?? '';
+        for (const line of lines) {
+          if (line.startsWith('event: ')) { event = line.slice(7).trim(); continue; }
+          if (!line.startsWith('data: ')) continue;
+          const data = JSON.parse(line.slice(6));
+          if (event === 'step') addStep({ id: data.id, message: data.message, done: false });
+          if (event === 'done') {
+            setMessages(prev => prev.map((m, i) => i === thinkingIdx && m.type === 'thinking' ? { ...m, steps: m.steps.map(s => ({ ...s, done: true })) } : m));
+            setMessages(prev => [...prev, { type: 'result', result: data as TailorResult }]);
+            setPreview(data as TailorResult);
+            setHtmlHistory([]);
           }
           if (event === 'error') {
             setMessages(prev => prev.map((m, i) => i === thinkingIdx ? { type: 'error', text: data.message } : m));
@@ -778,7 +883,7 @@ export default function Home() {
                   <div style={{ width: 26, height: 26, borderRadius: '50%', background: '#1a1a2e', border: '1px solid #252540', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, flexShrink: 0, marginTop: 1 }}>✦</div>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                     <div style={{ fontSize: 13, color: '#666' }}>Done! Preview opens on the right 👉</div>
-                    <ResultCard result={m.result} onView={setPreview} />
+                    <ResultCard result={m.result} onView={setPreview} onRetailor={handleRetailor} />
                   </div>
                 </div>
               )}
