@@ -222,29 +222,34 @@ const BASES = [
   { html: 'resume_base.html',          tex: 'resume_hybrid.tex'        },
 
   // ── Germany 🇩🇪 ──────────────────────────────────────────────────────────────
-  { html: 'resume_de_engineer.html',   tex: 'resume_de_engineer.tex'   },
-  { html: 'resume_de_analyst.html',    tex: 'resume_de_analyst.tex'    },
-  { html: 'resume_de_hybrid.html',     tex: 'resume_de_hybrid.tex'     },
+  { html: 'resume_de_engineer.html',         tex: 'resume_de_engineer.tex'         },
+  { html: 'resume_de_analyst.html',          tex: 'resume_de_analyst.tex'          },
+  { html: 'resume_de_data_engineer.html',    tex: 'resume_de_data_engineer.tex'    },
+  { html: 'resume_de_hybrid.html',           tex: 'resume_de_hybrid.tex'           },
 
   // ── Netherlands 🇳🇱 ──────────────────────────────────────────────────────────
-  { html: 'resume_nl_engineer.html',   tex: 'resume_nl_engineer.tex'   },
-  { html: 'resume_nl_analyst.html',    tex: 'resume_nl_analyst.tex'    },
-  { html: 'resume_nl_hybrid.html',     tex: 'resume_nl_hybrid.tex'     },
+  { html: 'resume_nl_engineer.html',         tex: 'resume_nl_engineer.tex'         },
+  { html: 'resume_nl_analyst.html',          tex: 'resume_nl_analyst.tex'          },
+  { html: 'resume_nl_data_engineer.html',    tex: 'resume_nl_data_engineer.tex'    },
+  { html: 'resume_nl_hybrid.html',           tex: 'resume_nl_hybrid.tex'           },
 
   // ── Singapore 🇸🇬 ────────────────────────────────────────────────────────────
-  { html: 'resume_sg_engineer.html',   tex: 'resume_sg_engineer.tex'   },
-  { html: 'resume_sg_analyst.html',    tex: 'resume_sg_analyst.tex'    },
-  { html: 'resume_sg_hybrid.html',     tex: 'resume_sg_hybrid.tex'     },
+  { html: 'resume_sg_engineer.html',         tex: 'resume_sg_engineer.tex'         },
+  { html: 'resume_sg_analyst.html',          tex: 'resume_sg_analyst.tex'          },
+  { html: 'resume_sg_data_engineer.html',    tex: 'resume_sg_data_engineer.tex'    },
+  { html: 'resume_sg_hybrid.html',           tex: 'resume_sg_hybrid.tex'           },
 
   // ── UAE 🇦🇪 ──────────────────────────────────────────────────────────────────
-  { html: 'resume_ae_engineer.html',   tex: 'resume_ae_engineer.tex'   },
-  { html: 'resume_ae_analyst.html',    tex: 'resume_ae_analyst.tex'    },
-  { html: 'resume_ae_hybrid.html',     tex: 'resume_ae_hybrid.tex'     },
+  { html: 'resume_ae_engineer.html',         tex: 'resume_ae_engineer.tex'         },
+  { html: 'resume_ae_analyst.html',          tex: 'resume_ae_analyst.tex'          },
+  { html: 'resume_ae_data_engineer.html',    tex: 'resume_ae_data_engineer.tex'    },
+  { html: 'resume_ae_hybrid.html',           tex: 'resume_ae_hybrid.tex'           },
 
   // ── Japan 🇯🇵 ────────────────────────────────────────────────────────────────
-  { html: 'resume_jp_engineer.html',   tex: 'resume_jp_engineer.tex'   },
-  { html: 'resume_jp_analyst.html',    tex: 'resume_jp_analyst.tex'    },
-  { html: 'resume_jp_hybrid.html',     tex: 'resume_jp_hybrid.tex'     },
+  { html: 'resume_jp_engineer.html',         tex: 'resume_jp_engineer.tex'         },
+  { html: 'resume_jp_analyst.html',          tex: 'resume_jp_analyst.tex'          },
+  { html: 'resume_jp_data_engineer.html',    tex: 'resume_jp_data_engineer.tex'    },
+  { html: 'resume_jp_hybrid.html',           tex: 'resume_jp_hybrid.tex'           },
 ];
 
 for (const { html, tex } of BASES) {
