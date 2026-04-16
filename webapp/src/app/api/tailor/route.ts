@@ -1,5 +1,6 @@
 import { NextRequest } from 'next/server';
 import { runPipeline, detectCompanyRole, slugify } from '@/lib/tailor';
+import { buildLatex } from '@/lib/latex';
 import { put } from '@vercel/blob';
 
 export const maxDuration = 300;
@@ -99,29 +100,44 @@ export async function POST(req: NextRequest) {
           `$1<base href="${origin}" />`,
         );
 
-        // Store the tailored HTML
+        // Store the tailored HTML + generate LaTeX
         const slug    = `${slugify(company)}_${slugify(role)}`;
         const fileName = `resume_${slug}.html`;
+        const texFileName = `resume_${slug}.tex`;
 
         let htmlUrl: string;
+        let texUrl: string;
+
+        // Generate LaTeX from the tailored HTML
+        const latexContent = buildLatex(htmlWithBase);
 
         if (process.env.BLOB_READ_WRITE_TOKEN) {
-          // Production: store in Vercel Blob
-          const blob = await put(`tailored/${slug}/${fileName}`, htmlWithBase, {
-            access: 'public',
-            contentType: 'text/html',
-            addRandomSuffix: false,
-          });
-          htmlUrl = blob.url;
+          // Production: store HTML + .tex in Vercel Blob
+          const [htmlBlob, texBlob] = await Promise.all([
+            put(`tailored/${slug}/${fileName}`, htmlWithBase, {
+              access: 'public',
+              contentType: 'text/html',
+              addRandomSuffix: false,
+            }),
+            put(`tailored/${slug}/${texFileName}`, latexContent, {
+              access: 'public',
+              contentType: 'text/plain',
+              addRandomSuffix: false,
+            }),
+          ]);
+          htmlUrl = htmlBlob.url;
+          texUrl  = texBlob.url;
         } else {
-          // Dev: store locally via data URL (client will render inline)
+          // Dev: store locally via data URLs (client renders inline / downloads)
           htmlUrl = `data:text/html;base64,${Buffer.from(htmlWithBase).toString('base64')}`;
+          texUrl  = `data:text/plain;base64,${Buffer.from(latexContent).toString('base64')}`;
         }
 
         send('done', {
           company:  result.company,
           role:     result.role,
           htmlUrl,
+          texUrl,
           html:           htmlWithBase,
           before:         result.before,
           after:          result.after,

@@ -24,7 +24,7 @@ const BASE_COLORS: Record<ResumeType, string> = { ai_engineer: '#6366f1', data_a
 
 interface TailorResult {
   company: string; role: string;
-  html: string; htmlUrl: string;
+  html: string; htmlUrl: string; texUrl?: string;
   before: CoverageResult; after: CoverageResult;
   keywords: string[]; slug: string;
   research?: string;
@@ -348,6 +348,15 @@ function PreviewPanel({ result, coverLetterHtml, initialTab = 'resume', onClose,
   }
 
   async function handleDownloadLatex() {
+    // Prod: use the pre-generated .tex stored in Vercel Blob (instant, no re-conversion)
+    if (result.texUrl && !result.texUrl.startsWith('data:')) {
+      const a = document.createElement('a');
+      a.href = result.texUrl;
+      a.download = `${getSlug()}.tex`;
+      a.click();
+      return;
+    }
+    // Dev or fallback: POST /api/latex to generate on the fly
     try {
       const res = await fetch('/api/latex', {
         method: 'POST',
@@ -523,6 +532,17 @@ function PreviewPanel({ result, coverLetterHtml, initialTab = 'resume', onClose,
             <button onClick={handleDownloadLatex} title="LaTeX source — upload to Overleaf for premium PDF" style={{ background: '#1a2e1a', color: '#86efac', border: '1px solid #166534', borderRadius: 8, padding: '7px 14px', fontSize: 13, fontWeight: 500, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6 }}>
               <Download size={13} /> LaTeX
             </button>
+            {result.texUrl && !result.texUrl.startsWith('data:') && (
+              <a
+                href={`https://www.overleaf.com/docs?snip_uri=${encodeURIComponent(result.texUrl)}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                title="Open this resume in Overleaf — compile to get a premium PDF"
+                style={{ background: '#1a3a1a', color: '#4ade80', border: '1px solid #166534', borderRadius: 8, padding: '7px 14px', fontSize: 13, fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6, textDecoration: 'none' }}
+              >
+                ↗ Overleaf
+              </a>
+            )}
             <button onClick={handleDownloadTxt} title="Plain text — best for Workday / ATS form parsing" style={{ background: '#1e293b', color: '#64748b', border: '1px solid #334155', borderRadius: 8, padding: '7px 14px', fontSize: 13, fontWeight: 500, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6 }}>
               <Download size={13} /> TXT
             </button>
@@ -831,6 +851,55 @@ export default function Home() {
     setLoading(false);
   }
 
+  async function handleRetry() {
+    if (!lastJd || loading) return;
+    setLoading(true);
+    const thinkingIdx = messages.length;
+    setMessages(prev => [...prev, { type: 'thinking', steps: [] }]);
+
+    const addStep = (step: Step) => setMessages(prev => prev.map((m, i) => {
+      if (i !== thinkingIdx || m.type !== 'thinking') return m;
+      const exists = m.steps.find(s => s.id === step.id);
+      if (exists) return { ...m, steps: m.steps.map(s => s.id === step.id ? { ...s, done: true } : s) };
+      return { ...m, steps: [...m.steps, step] };
+    }));
+
+    try {
+      const res = await fetch('/api/tailor', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ jd: lastJd }) });
+      const reader = res.body!.getReader();
+      const decoder = new TextDecoder();
+      let buf = '';
+      let event = '';
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        buf += decoder.decode(value, { stream: true });
+        const lines = buf.split('\n');
+        buf = lines.pop() ?? '';
+        for (const line of lines) {
+          if (line.startsWith('event: ')) { event = line.slice(7).trim(); continue; }
+          if (!line.startsWith('data: ')) continue;
+          const data = JSON.parse(line.slice(6));
+          if (event === 'detected')  addStep({ id: 'detected', message: `${data.company} — ${data.role}`, done: true });
+          if (event === 'step')      addStep({ id: data.id, message: data.message, done: false });
+          if (event === 'done') {
+            setMessages(prev => prev.map((m, i) => i === thinkingIdx && m.type === 'thinking' ? { ...m, steps: m.steps.map(s => ({ ...s, done: true })) } : m));
+            setMessages(prev => [...prev, { type: 'result', result: data as TailorResult }]);
+            setPreview(data as TailorResult);
+            setHtmlHistory([]);
+          }
+          if (event === 'error') {
+            setMessages(prev => prev.map((m, i) => i === thinkingIdx ? { type: 'error', text: data.message } : m));
+          }
+        }
+      }
+    } catch (e) {
+      setMessages(prev => prev.map((m, i) => i === thinkingIdx ? { type: 'error', text: String(e) } : m));
+    }
+    setLoading(false);
+  }
+
   function handleUndo() {
     if (htmlHistory.length === 0 || !preview) return;
     const previousHtml = htmlHistory[htmlHistory.length - 1];
@@ -947,7 +1016,16 @@ export default function Home() {
                     <AlertCircle size={13} color="#ef4444" />
                   </div>
                   <div style={{ background: '#1a1010', border: '1px solid #2a1515', borderRadius: '3px 12px 12px 12px', padding: '10px 14px', fontSize: 13, color: '#f87171' }}>
-                    {m.text}
+                    <div>{m.text}</div>
+                    {lastJd && (
+                      <button
+                        onClick={handleRetry}
+                        disabled={loading}
+                        style={{ marginTop: 8, background: '#2a1515', color: '#fca5a5', border: '1px solid #3d1a1a', borderRadius: 6, padding: '4px 10px', fontSize: 11, cursor: loading ? 'not-allowed' : 'pointer', fontWeight: 500, opacity: loading ? 0.5 : 1 }}
+                      >
+                        ↺ Retry
+                      </button>
+                    )}
                   </div>
                 </div>
               )}

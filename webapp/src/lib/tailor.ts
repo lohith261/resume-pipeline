@@ -134,7 +134,7 @@ country rules (detect from location, company HQ, currency, office city, visa men
   try {
     const clean = res.replace(/```(?:json)?|```/g, '').trim();
     const parsed = JSON.parse(clean);
-    const type = (['ai_engineer', 'data_analyst', 'hybrid'] as ResumeType[]).includes(parsed.type)
+    const type = (['ai_engineer', 'data_analyst', 'data_engineer', 'hybrid'] as ResumeType[]).includes(parsed.type)
       ? parsed.type as ResumeType
       : 'hybrid';
     const validCountries: CountryCode[] = ['de', 'nl', 'sg', 'ae', 'jp', 'lu'];
