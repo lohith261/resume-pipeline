@@ -121,21 +121,27 @@ export async function POST(req: NextRequest) {
         const latexContent = buildLatex(htmlWithBase);
 
         if (process.env.BLOB_READ_WRITE_TOKEN) {
-          // Production: store HTML + .tex in Vercel Blob
-          const [htmlBlob, texBlob] = await Promise.all([
-            put(`tailored/${slug}/${fileName}`, htmlWithBase, {
-              access: 'public',
-              contentType: 'text/html',
-              addRandomSuffix: false,
-            }),
-            put(`tailored/${slug}/${texFileName}`, latexContent, {
-              access: 'public',
-              contentType: 'text/plain',
-              addRandomSuffix: false,
-            }),
-          ]);
-          htmlUrl = htmlBlob.url;
-          texUrl  = texBlob.url;
+          // Production: store HTML + .tex in Vercel Blob (public access required)
+          try {
+            const [htmlBlob, texBlob] = await Promise.all([
+              put(`tailored/${slug}/${fileName}`, htmlWithBase, {
+                access: 'public',
+                contentType: 'text/html',
+                addRandomSuffix: false,
+              }),
+              put(`tailored/${slug}/${texFileName}`, latexContent, {
+                access: 'public',
+                contentType: 'text/plain',
+                addRandomSuffix: false,
+              }),
+            ]);
+            htmlUrl = htmlBlob.url;
+            texUrl  = texBlob.url;
+          } catch {
+            // Blob store is private-only — fall back to data: URLs (Overleaf button hidden)
+            htmlUrl = `data:text/html;base64,${Buffer.from(htmlWithBase).toString('base64')}`;
+            texUrl  = `data:text/plain;base64,${Buffer.from(latexContent).toString('base64')}`;
+          }
         } else {
           // Dev: store locally via data URLs (client renders inline / downloads)
           htmlUrl = `data:text/html;base64,${Buffer.from(htmlWithBase).toString('base64')}`;
