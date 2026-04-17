@@ -420,9 +420,6 @@ export async function runPipeline(
   onStep('summarizing');
   let html = await tailorSummary(baseHtml, company, role, research);
 
-  // ── Always: inject target role subtitle under candidate name ───────────
-  html = injectTargetRole(html, role);
-
   let after = scoreCoverage(keywords, html);
 
   // ── Keyword tailoring: run whenever ANY keywords are missing ───────────
