@@ -37,6 +37,11 @@ interface InterviewQuestion {
   star: { situation: string; task: string; action: string; result: string };
 }
 
+interface OutreachResult {
+  email: { subject: string; body: string };
+  linkedin: { connectNote: string; dm: string };
+}
+
 type Message =
   | { type: 'user';         text: string }
   | { type: 'thinking';     steps: Step[] }
@@ -268,14 +273,26 @@ function PreviewPanel({ result, coverLetterHtml, initialTab = 'resume', onClose,
   onUndo?: () => void;
   canUndo?: boolean;
 }) {
-  const [tab, setTab]                       = useState<'resume' | 'cover' | 'interview'>(initialTab);
+  const [tab, setTab]                       = useState<'resume' | 'cover' | 'interview' | 'outreach'>(initialTab);
   const [interviewQs, setInterviewQs]       = useState<InterviewQuestion[] | null>(null);
   const [interviewLoading, setInterviewLoading] = useState(false);
   const [expandedQ, setExpandedQ]           = useState<number | null>(null);
+  const [outreachContact, setOutreachContact] = useState({ name: '', title: '' });
+  const [outreachResult, setOutreachResult]   = useState<OutreachResult | null>(null);
+  const [outreachLoading, setOutreachLoading] = useState(false);
+  const [outreachError, setOutreachError]     = useState<string | null>(null);
+  const [copiedField, setCopiedField]         = useState<string | null>(null);
   const activeHtml = tab === 'cover' && coverLetterHtml ? coverLetterHtml : result.html;
 
   // Sync to cover tab when a new cover letter arrives
   useEffect(() => { if (initialTab === 'cover') setTab('cover'); }, [initialTab]);
+
+  // Reset outreach draft when a new resume is tailored
+  useEffect(() => {
+    setOutreachResult(null);
+    setOutreachError(null);
+    setOutreachContact({ name: '', title: '' });
+  }, [result.slug]);
 
   // Fetch interview questions on first visit to that tab
   useEffect(() => {
@@ -303,6 +320,39 @@ function PreviewPanel({ result, coverLetterHtml, initialTab = 'resume', onClose,
       ? `Cover_Letter_${result.company}_${result.role}`
       : `Resume_${result.company}_${result.role}`;
     return base.replace(/[^a-zA-Z0-9]+/g, '_').replace(/^_|_$/g, '');
+  }
+
+  function copyText(field: string, text: string) {
+    navigator.clipboard.writeText(text).catch(() => {});
+    setCopiedField(field);
+    setTimeout(() => setCopiedField(null), 1500);
+  }
+
+  async function handleGenerateOutreach() {
+    if (!outreachContact.name.trim() || outreachLoading) return;
+    setOutreachLoading(true);
+    setOutreachError(null);
+    setOutreachResult(null);
+    try {
+      const r = await fetch('/api/outreach', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          company: result.company,
+          role: result.role,
+          research: result.research ?? '',
+          resumeHtml: result.html,
+          contactName: outreachContact.name.trim(),
+          contactTitle: outreachContact.title.trim(),
+        }),
+      });
+      const d = await r.json();
+      if (d.error) throw new Error(d.error);
+      setOutreachResult(d as OutreachResult);
+    } catch (e) {
+      setOutreachError(String(e));
+    }
+    setOutreachLoading(false);
   }
 
   function handleDownload() {
@@ -508,6 +558,8 @@ function PreviewPanel({ result, coverLetterHtml, initialTab = 'resume', onClose,
               ? <>Coverage: <CoverageBadge pct={result.after.pct} /> &nbsp;·&nbsp; {result.after.covered.length}/{result.after.total} keywords</>
               : tab === 'cover'
               ? <span style={{ color: '#a0b4ff' }}>Cover Letter</span>
+              : tab === 'outreach'
+              ? <span style={{ color: '#0ea5e9' }}>Warm Outreach · email + LinkedIn drafts</span>
               : <span style={{ color: '#f59e0b' }}>Interview Prep · 5 questions tailored to this JD</span>}
           </div>
         </div>
@@ -517,13 +569,14 @@ function PreviewPanel({ result, coverLetterHtml, initialTab = 'resume', onClose,
             <button onClick={() => setTab('resume')} style={{ background: tab === 'resume' ? '#6366f1' : 'transparent', color: tab === 'resume' ? '#fff' : '#666', border: 'none', borderRadius: 5, padding: '4px 10px', fontSize: 11, fontWeight: 500, cursor: 'pointer' }}>📄 Resume</button>
             {coverLetterHtml && <button onClick={() => setTab('cover')} style={{ background: tab === 'cover' ? '#6366f1' : 'transparent', color: tab === 'cover' ? '#fff' : '#666', border: 'none', borderRadius: 5, padding: '4px 10px', fontSize: 11, fontWeight: 500, cursor: 'pointer' }}>✉️ Cover</button>}
             <button onClick={() => setTab('interview')} style={{ background: tab === 'interview' ? '#f59e0b' : 'transparent', color: tab === 'interview' ? '#000' : '#666', border: 'none', borderRadius: 5, padding: '4px 10px', fontSize: 11, fontWeight: 500, cursor: 'pointer' }}>🎯 Interview</button>
+            <button onClick={() => setTab('outreach')} style={{ background: tab === 'outreach' ? '#0ea5e9' : 'transparent', color: tab === 'outreach' ? '#fff' : '#666', border: 'none', borderRadius: 5, padding: '4px 10px', fontSize: 11, fontWeight: 500, cursor: 'pointer' }}>📬 Outreach</button>
           </div>
-          {canUndo && tab !== 'interview' && (
+          {canUndo && tab !== 'interview' && tab !== 'outreach' && (
             <button onClick={onUndo} title="Undo last edit" style={{ background: '#1a1a1a', color: '#f59e0b', border: '1px solid #3a2a00', borderRadius: 8, padding: '7px 12px', fontSize: 13, fontWeight: 500, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6 }}>
               <Undo2 size={13} /> Undo
             </button>
           )}
-          {tab !== 'interview' && <>
+          {tab !== 'interview' && tab !== 'outreach' && <>
             <button onClick={handleDownload} style={{ background: '#6366f1', color: '#fff', border: 'none', borderRadius: 8, padding: '7px 14px', fontSize: 13, fontWeight: 500, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6 }}>
               <Download size={13} /> PDF
             </button>
@@ -553,7 +606,133 @@ function PreviewPanel({ result, coverLetterHtml, initialTab = 'resume', onClose,
       </div>
 
       {/* Content */}
-      {tab === 'interview' ? (
+      {tab === 'outreach' ? (
+        <div style={{ flex: 1, overflowY: 'auto', background: '#111', padding: '24px 32px 48px' }}>
+          <div style={{ maxWidth: 680, margin: '0 auto' }}>
+
+            {/* Step 1 — LinkedIn search */}
+            <div style={{ marginBottom: 24 }}>
+              <div style={{ fontSize: 13, fontWeight: 600, color: '#e8e8e8', marginBottom: 8 }}>Step 1 — Find your contact on LinkedIn</div>
+              <p style={{ fontSize: 12, color: '#888', marginBottom: 12, lineHeight: 1.6 }}>
+                Look for a hiring manager, engineering lead, or recruiter at <strong style={{ color: '#ccc' }}>{result.company}</strong>.
+                Titles like &quot;Engineering Manager&quot;, &quot;Head of Data&quot;, &quot;Tech Lead&quot;, or &quot;Technical Recruiter&quot; work well.
+              </p>
+              <a
+                href={`https://www.linkedin.com/search/results/people/?keywords=${encodeURIComponent(`hiring manager ${result.role} ${result.company}`)}&origin=GLOBAL_SEARCH_HEADER`}
+                target="_blank"
+                rel="noopener noreferrer"
+                style={{ display: 'inline-flex', alignItems: 'center', gap: 7, background: '#0a66c2', color: '#fff', borderRadius: 8, padding: '9px 16px', fontSize: 12, fontWeight: 600, textDecoration: 'none' }}
+              >
+                🔍 Search LinkedIn for {result.company} contacts ↗
+              </a>
+            </div>
+
+            {/* Step 2 — Enter contact details */}
+            <div style={{ marginBottom: 24, background: '#1a1a1a', borderRadius: 10, padding: 18, border: '1px solid #252525' }}>
+              <div style={{ fontSize: 13, fontWeight: 600, color: '#e8e8e8', marginBottom: 14 }}>Step 2 — Enter their details</div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 12, marginBottom: 16 }}>
+                <div>
+                  <label style={{ display: 'block', fontSize: 11, color: '#888', marginBottom: 5 }}>Full Name *</label>
+                  <input
+                    value={outreachContact.name}
+                    onChange={e => setOutreachContact(p => ({ ...p, name: e.target.value }))}
+                    placeholder="e.g. Sarah Chen"
+                    style={{ width: '100%', background: '#111', border: '1px solid #2a2a2a', color: '#e8e8e8', borderRadius: 6, padding: '8px 10px', fontSize: 12, outline: 'none', boxSizing: 'border-box' }}
+                  />
+                </div>
+                <div>
+                  <label style={{ display: 'block', fontSize: 11, color: '#888', marginBottom: 5 }}>Job Title <span style={{ color: '#555' }}>(optional)</span></label>
+                  <input
+                    value={outreachContact.title}
+                    onChange={e => setOutreachContact(p => ({ ...p, title: e.target.value }))}
+                    placeholder="e.g. Engineering Manager, Data Platform"
+                    style={{ width: '100%', background: '#111', border: '1px solid #2a2a2a', color: '#e8e8e8', borderRadius: 6, padding: '8px 10px', fontSize: 12, outline: 'none', boxSizing: 'border-box' }}
+                  />
+                </div>
+              </div>
+              <button
+                onClick={handleGenerateOutreach}
+                disabled={!outreachContact.name.trim() || outreachLoading}
+                style={{ background: outreachContact.name.trim() && !outreachLoading ? '#0ea5e9' : '#1a2a2a', color: outreachContact.name.trim() && !outreachLoading ? '#fff' : '#444', border: 'none', borderRadius: 8, padding: '9px 20px', fontSize: 13, fontWeight: 600, cursor: outreachContact.name.trim() && !outreachLoading ? 'pointer' : 'not-allowed', display: 'flex', alignItems: 'center', gap: 7, transition: 'background 0.2s' }}
+              >
+                {outreachLoading
+                  ? <><Loader2 size={13} className="animate-spin" /> Generating messages...</>
+                  : '✉ Generate Messages'}
+              </button>
+              {outreachError && <div style={{ fontSize: 12, color: '#f87171', marginTop: 10 }}>{outreachError}</div>}
+            </div>
+
+            {/* Generated message cards */}
+            {outreachResult && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+
+                {/* Warm Email */}
+                <div style={{ background: '#1a1a1a', border: '1px solid #252525', borderRadius: 10, padding: 16 }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+                    <div style={{ fontWeight: 600, fontSize: 13, color: '#e8e8e8' }}>✉ Warm Email</div>
+                    <button
+                      onClick={() => copyText('email', `Subject: ${outreachResult.email.subject}\n\n${outreachResult.email.body}`)}
+                      style={{ background: copiedField === 'email' ? '#052e16' : '#111', color: copiedField === 'email' ? '#4ade80' : '#888', border: `1px solid ${copiedField === 'email' ? '#166534' : '#2a2a2a'}`, borderRadius: 6, padding: '4px 11px', fontSize: 11, cursor: 'pointer', transition: 'all 0.15s' }}
+                    >
+                      {copiedField === 'email' ? '✓ Copied!' : '📋 Copy'}
+                    </button>
+                  </div>
+                  <div style={{ fontSize: 11, color: '#555', marginBottom: 5 }}>Subject</div>
+                  <div style={{ fontSize: 12, color: '#a0b4ff', fontWeight: 500, marginBottom: 14, padding: '7px 10px', background: '#111', borderRadius: 6 }}>
+                    {outreachResult.email.subject}
+                  </div>
+                  <div style={{ fontSize: 11, color: '#555', marginBottom: 5 }}>Body</div>
+                  <div style={{ fontSize: 12, color: '#ccc', lineHeight: 1.7, whiteSpace: 'pre-wrap', padding: '9px 10px', background: '#111', borderRadius: 6 }}>
+                    {outreachResult.email.body}
+                  </div>
+                </div>
+
+                {/* LinkedIn Connection Note */}
+                <div style={{ background: '#1a1a1a', border: '1px solid #252525', borderRadius: 10, padding: 16 }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+                    <div>
+                      <div style={{ fontWeight: 600, fontSize: 13, color: '#e8e8e8' }}>💼 LinkedIn Connection Note</div>
+                      <div style={{ fontSize: 10, color: '#555', marginTop: 2 }}>Paste when sending a connection request (300 char limit)</div>
+                    </div>
+                    <button
+                      onClick={() => copyText('connect', outreachResult.linkedin.connectNote)}
+                      style={{ background: copiedField === 'connect' ? '#052e16' : '#111', color: copiedField === 'connect' ? '#4ade80' : '#888', border: `1px solid ${copiedField === 'connect' ? '#166534' : '#2a2a2a'}`, borderRadius: 6, padding: '4px 11px', fontSize: 11, cursor: 'pointer', transition: 'all 0.15s' }}
+                    >
+                      {copiedField === 'connect' ? '✓ Copied!' : '📋 Copy'}
+                    </button>
+                  </div>
+                  <div style={{ fontSize: 12, color: '#ccc', lineHeight: 1.65, whiteSpace: 'pre-wrap', padding: '9px 10px', background: '#111', borderRadius: 6, marginBottom: 6 }}>
+                    {outreachResult.linkedin.connectNote}
+                  </div>
+                  <div style={{ fontSize: 10, color: outreachResult.linkedin.connectNote.length > 280 ? '#f87171' : '#555', textAlign: 'right' }}>
+                    {outreachResult.linkedin.connectNote.length} / 300 chars
+                  </div>
+                </div>
+
+                {/* LinkedIn DM */}
+                <div style={{ background: '#1a1a1a', border: '1px solid #252525', borderRadius: 10, padding: 16 }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+                    <div>
+                      <div style={{ fontWeight: 600, fontSize: 13, color: '#e8e8e8' }}>💬 LinkedIn DM</div>
+                      <div style={{ fontSize: 10, color: '#555', marginTop: 2 }}>Send this after they accept your connection request</div>
+                    </div>
+                    <button
+                      onClick={() => copyText('dm', outreachResult.linkedin.dm)}
+                      style={{ background: copiedField === 'dm' ? '#052e16' : '#111', color: copiedField === 'dm' ? '#4ade80' : '#888', border: `1px solid ${copiedField === 'dm' ? '#166534' : '#2a2a2a'}`, borderRadius: 6, padding: '4px 11px', fontSize: 11, cursor: 'pointer', transition: 'all 0.15s' }}
+                    >
+                      {copiedField === 'dm' ? '✓ Copied!' : '📋 Copy'}
+                    </button>
+                  </div>
+                  <div style={{ fontSize: 12, color: '#ccc', lineHeight: 1.65, whiteSpace: 'pre-wrap', padding: '9px 10px', background: '#111', borderRadius: 6 }}>
+                    {outreachResult.linkedin.dm}
+                  </div>
+                </div>
+
+              </div>
+            )}
+          </div>
+        </div>
+      ) : tab === 'interview' ? (
         <div style={{ flex: 1, overflowY: 'auto', background: '#111', padding: '24px 32px 48px' }}>
           {interviewLoading && (
             <div style={{ display: 'flex', alignItems: 'center', gap: 10, color: '#888', fontSize: 13, marginTop: 40, justifyContent: 'center' }}>
