@@ -276,7 +276,7 @@ REQUIREMENTS:
 2. Keep EVERY quantified metric from the original (percentages, numbers, scale)
 3. Weave in one specific signal from the company research (their tech stack or what impresses them)
 4. 2-3 tight sentences — no filler words, no "passionate about", no "proven track record"
-5. Third person — no "I" or "my"
+5. First-person implied — NO pronouns at all (no "I", "my", "they", "their", "he", "she"). Start sentences with strong action verbs or role nouns: "Engineer with...", "Architected...", "Built...", "Specializes in..."
 6. The last phrase should signal unique fit for this specific company`,
     350,
   );
