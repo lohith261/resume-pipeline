@@ -33,7 +33,7 @@ function esc(s) {
     .replace(/"/g,  "''")
     .replace(/"/g,  "``")
     .replace(/…/g,  '\\ldots{}')
-    .replace(/₹/g,  '\\rupee{}')
+    .replace(/₹/g,  'Rs.')
     .replace(/•/g,  '\\textbullet{}');
 }
 
@@ -112,7 +112,14 @@ function buildLatex(html) {
   });
 
   if (contactParts.length) {
-    lines.push(`  \\small ${contactParts.join(' $\\vert$\\; ')}`);
+    if (contactParts.length > 4) {
+      const row1 = contactParts.slice(0, 4);
+      const row2 = contactParts.slice(4);
+      lines.push(`  \\small ${row1.join(' $\\vert$\\; ')} \\\\[2pt]`);
+      lines.push(`  \\small\\textit{${row2.join(' $\\vert$\\; ')}}`);
+    } else {
+      lines.push(`  \\small ${contactParts.join(' $\\vert$\\; ')}`);
+    }
   }
   lines.push(`\\end{center}\n`);
 
@@ -176,6 +183,12 @@ function buildLatex(html) {
       const year   = sec.querySelector('.edu-year')?.text?.trim()   ?? '';
       const school = sec.querySelector('.edu-school')?.text?.trim() ?? '';
       lines.push(`\\entry{${esc(degree)}}{${esc(school)}}{${esc(year)}}`);
+      const eduNote = (
+        sec.querySelector('.edu-compass-note') ??
+        sec.querySelector('.edu-anabin-note') ??
+        sec.querySelector('.edu-note')
+      )?.text?.trim() ?? '';
+      if (eduNote) lines.push(`\\textit{\\small ${esc(eduNote)}}`);
       const lis = sec.querySelectorAll('li');
       if (lis.length) {
         lines.push(`\\begin{itemize}`);
