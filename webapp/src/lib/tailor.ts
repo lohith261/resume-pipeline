@@ -72,7 +72,7 @@ function slugify(text: string) {
 }
 
 export type ResumeType = 'ai_engineer' | 'data_analyst' | 'data_engineer' | 'hybrid';
-export type CountryCode = 'de' | 'nl' | 'sg' | 'ae' | 'jp' | 'lu';
+export type CountryCode = 'de' | 'nl' | 'sg' | 'ae' | 'jp' | 'lu' | 'ie';
 
 export interface Classification {
   type: ResumeType;
@@ -96,6 +96,7 @@ const COUNTRY_RESUME_FILES: Record<CountryCode, Record<ResumeType, string>> = {
   jp: { ai_engineer: 'resume_jp_engineer.html', hybrid: 'resume_jp_hybrid.html', data_analyst: 'resume_jp_analyst.html', data_engineer: 'resume_jp_data_engineer.html' },
   // Luxembourg: uses DE base (same EU Blue Card scheme, similar professional norms)
   lu: { ai_engineer: 'resume_de_engineer.html', hybrid: 'resume_de_hybrid.html', data_analyst: 'resume_de_analyst.html', data_engineer: 'resume_de_data_engineer.html' },
+  ie: { ai_engineer: 'resume_ie_engineer.html', hybrid: 'resume_ie_hybrid.html', data_analyst: 'resume_ie_analyst.html', data_engineer: 'resume_ie_data_engineer.html' },
 };
 
 export function getBaseHtml(type: ResumeType = 'hybrid', country?: CountryCode | null): string {
@@ -112,7 +113,7 @@ export function getBaseHtml(type: ResumeType = 'hybrid', country?: CountryCode |
 export async function classifyJd(jd: string): Promise<Classification> {
   const res = await groqFast(
     `Classify this job description. Return ONLY valid JSON (no markdown):
-{"type":"ai_engineer|data_analyst|data_engineer|hybrid","confidence":0.0-1.0,"reasoning":"one sentence","country":"de|nl|sg|ae|jp|lu|null"}
+{"type":"ai_engineer|data_analyst|data_engineer|hybrid","confidence":0.0-1.0,"reasoning":"one sentence","country":"de|nl|sg|ae|jp|lu|ie|null"}
 
 type rules:
 - "ai_engineer" → primary focus on LLMs, RAG, LangChain, agents, GenAI, prompt engineering, inference
@@ -127,6 +128,7 @@ country rules (detect from location, company HQ, currency, office city, visa men
 - "ae" → UAE/Dubai (Dubai, Abu Dhabi, AED, UAE, DIFC, free zone, LLC)
 - "jp" → Japan (Tokyo, Osaka, Kyoto, Fukuoka, JPY, ¥, K.K., G.K., Kabushiki Kaisha, JLPT, work visa Japan, Engineer visa Japan, Rakuten, Mercari, LINE, DeNA, CyberAgent, NTT, Fujitsu, SoftBank, Sony, Recruit)
 - "lu" → Luxembourg (Luxembourg City, Kirchberg, Belval, S.A., S.à r.l., EUR, CSSF, EIB, European Investment Bank, Amazon Luxembourg, PayPal Luxembourg, Skype Luxembourg, Vodafone Luxembourg)
+- "ie" → Ireland (Dublin, Cork, Galway, Limerick, Waterford, EUR, IDA Ireland, CSEP, Critical Skills Employment Permit, Enterprise Ireland, Google Dublin, Meta Dublin, LinkedIn Dublin, Stripe Dublin, Salesforce Dublin, HubSpot Dublin, Intercom, Workday Ireland, Indeed Ireland, Irish company, Ltd. Ireland)
 - null → country unclear or not one of the above`,
     jd.slice(0, 3000),
     350,
@@ -137,7 +139,7 @@ country rules (detect from location, company HQ, currency, office city, visa men
     const type = (['ai_engineer', 'data_analyst', 'data_engineer', 'hybrid'] as ResumeType[]).includes(parsed.type)
       ? parsed.type as ResumeType
       : 'hybrid';
-    const validCountries: CountryCode[] = ['de', 'nl', 'sg', 'ae', 'jp', 'lu'];
+    const validCountries: CountryCode[] = ['de', 'nl', 'sg', 'ae', 'jp', 'lu', 'ie'];
     const country = validCountries.includes(parsed.country) ? parsed.country as CountryCode : null;
     return { type, confidence: parsed.confidence ?? 0.7, reasoning: parsed.reasoning ?? '', country };
   } catch {

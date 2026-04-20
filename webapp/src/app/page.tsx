@@ -119,8 +119,8 @@ function ResultCard({ result, onView, onRetailor }: { result: TailorResult; onVi
               </span>
               <span style={{ color: '#555', fontSize: 10 }}>{Math.round(result.classification.confidence * 100)}% confidence</span>
               {result.classification?.country && (() => {
-                const countryLabel: Record<string, string> = { de: '🇩🇪 Germany', nl: '🇳🇱 Netherlands', sg: '🇸🇬 Singapore', ae: '🇦🇪 UAE' };
-                const countryColor: Record<string, string> = { de: '#2563eb', nl: '#f97316', sg: '#dc2626', ae: '#059669' };
+                const countryLabel: Record<string, string> = { de: '🇩🇪 Germany', nl: '🇳🇱 Netherlands', sg: '🇸🇬 Singapore', ae: '🇦🇪 UAE', jp: '🇯🇵 Japan', lu: '🇱🇺 Luxembourg', ie: '🇮🇪 Ireland' };
+                const countryColor: Record<string, string> = { de: '#2563eb', nl: '#f97316', sg: '#dc2626', ae: '#059669', jp: '#dc2626', lu: '#2563eb', ie: '#16a34a' };
                 const c = result.classification.country as string;
                 return (
                   <span style={{ background: countryColor[c] + '22', color: countryColor[c], border: `1px solid ${countryColor[c]}44`, fontSize: 10, fontWeight: 600, padding: '2px 8px', borderRadius: 20 }}>
@@ -281,17 +281,20 @@ function PreviewPanel({ result, coverLetterHtml, initialTab = 'resume', onClose,
   const [outreachResult, setOutreachResult]   = useState<OutreachResult | null>(null);
   const [outreachLoading, setOutreachLoading] = useState(false);
   const [outreachError, setOutreachError]     = useState<string | null>(null);
+  const [interestAnswer, setInterestAnswer]   = useState<string | null>(null);
+  const [interestLoading, setInterestLoading] = useState(false);
   const [copiedField, setCopiedField]         = useState<string | null>(null);
   const activeHtml = tab === 'cover' && coverLetterHtml ? coverLetterHtml : result.html;
 
   // Sync to cover tab when a new cover letter arrives
   useEffect(() => { if (initialTab === 'cover') setTab('cover'); }, [initialTab]);
 
-  // Reset outreach draft when a new resume is tailored
+  // Reset outreach + interest drafts when a new resume is tailored
   useEffect(() => {
     setOutreachResult(null);
     setOutreachError(null);
     setOutreachContact({ name: '', title: '' });
+    setInterestAnswer(null);
   }, [result.slug]);
 
   // Fetch interview questions on first visit to that tab
@@ -353,6 +356,29 @@ function PreviewPanel({ result, coverLetterHtml, initialTab = 'resume', onClose,
       setOutreachError(String(e));
     }
     setOutreachLoading(false);
+  }
+
+  async function handleGenerateInterest() {
+    if (interestLoading) return;
+    setInterestLoading(true);
+    try {
+      const res = await fetch('/api/interest', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          company: result.company,
+          role: result.role,
+          research: result.research ?? '',
+          resumeHtml: result.html,
+        }),
+      });
+      const data = await res.json();
+      if (data.answer) setInterestAnswer(data.answer);
+    } catch {
+      // fail silently — button reappears
+    } finally {
+      setInterestLoading(false);
+    }
   }
 
   function handleDownload() {
@@ -734,6 +760,37 @@ function PreviewPanel({ result, coverLetterHtml, initialTab = 'resume', onClose,
         </div>
       ) : tab === 'interview' ? (
         <div style={{ flex: 1, overflowY: 'auto', background: '#111', padding: '24px 32px 48px' }}>
+
+          {/* ── What interests you? card ─────────────────────────────────── */}
+          <div style={{ maxWidth: 720, margin: '0 auto 20px', background: '#1c1a10', border: '1px solid #854d0e', borderRadius: 10, padding: '14px 16px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: interestAnswer ? 10 : 0 }}>
+              <span style={{ color: '#fbbf24', fontWeight: 600, fontSize: 13 }}>
+                ✦ What interests you about working for {result.company}?
+              </span>
+              {interestAnswer && (
+                <button
+                  onClick={() => copyText('interest', interestAnswer)}
+                  style={{ background: '#292524', border: `1px solid ${copiedField === 'interest' ? '#166534' : '#57534e'}`, borderRadius: 6, color: copiedField === 'interest' ? '#4ade80' : '#d6d3d1', fontSize: 11, padding: '3px 10px', cursor: 'pointer', transition: 'all 0.15s' }}
+                >
+                  {copiedField === 'interest' ? '✓ Copied!' : '📋 Copy'}
+                </button>
+              )}
+            </div>
+            {interestAnswer ? (
+              <p style={{ color: '#d6d3d1', fontSize: 13, lineHeight: 1.65, margin: 0 }}>{interestAnswer}</p>
+            ) : (
+              <button
+                onClick={handleGenerateInterest}
+                disabled={interestLoading}
+                style={{ marginTop: 8, background: '#451a03', border: '1px solid #92400e', borderRadius: 7, color: '#fbbf24', fontSize: 13, fontWeight: 600, padding: '7px 16px', cursor: interestLoading ? 'wait' : 'pointer', opacity: interestLoading ? 0.7 : 1, display: 'flex', alignItems: 'center', gap: 6 }}
+              >
+                {interestLoading ? (
+                  <><Loader2 size={13} className="animate-spin" /> Generating…</>
+                ) : '✦ Generate Answer'}
+              </button>
+            )}
+          </div>
+
           {interviewLoading && (
             <div style={{ display: 'flex', alignItems: 'center', gap: 10, color: '#888', fontSize: 13, marginTop: 40, justifyContent: 'center' }}>
               <Loader2 size={16} color="#f59e0b" className="animate-spin" />

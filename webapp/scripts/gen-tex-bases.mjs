@@ -263,6 +263,12 @@ const BASES = [
   { html: 'resume_jp_analyst.html',          tex: 'resume_jp_analyst.tex'          },
   { html: 'resume_jp_data_engineer.html',    tex: 'resume_jp_data_engineer.tex'    },
   { html: 'resume_jp_hybrid.html',           tex: 'resume_jp_hybrid.tex'           },
+
+  // ── Ireland 🇮🇪 ──────────────────────────────────────────────────────────────
+  { html: 'resume_ie_engineer.html',         tex: 'resume_ie_engineer.tex'         },
+  { html: 'resume_ie_analyst.html',          tex: 'resume_ie_analyst.tex'          },
+  { html: 'resume_ie_data_engineer.html',    tex: 'resume_ie_data_engineer.tex'    },
+  { html: 'resume_ie_hybrid.html',           tex: 'resume_ie_hybrid.tex'           },
 ];
 
 for (const { html, tex } of BASES) {
