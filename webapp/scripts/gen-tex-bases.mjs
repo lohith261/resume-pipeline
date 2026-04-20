@@ -188,7 +188,7 @@ function buildLatex(html) {
         sec.querySelector('.edu-anabin-note') ??
         sec.querySelector('.edu-note')
       )?.text?.trim() ?? '';
-      if (eduNote) lines.push(`\\textit{\\small ${esc(eduNote)}}`);
+      if (eduNote) lines.push(`\\newline\\textit{\\small ${esc(eduNote)}}`);
       const lis = sec.querySelectorAll('li');
       if (lis.length) {
         lines.push(`\\begin{itemize}`);

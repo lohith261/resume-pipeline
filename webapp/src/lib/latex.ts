@@ -202,7 +202,7 @@ export function buildLatex(html: string): string {
         sec.querySelector('.edu-anabin-note') ??
         sec.querySelector('.edu-note')
       )?.text?.trim() ?? '';
-      if (eduNote) lines.push(`\\textit{\\small ${esc(eduNote)}}`);
+      if (eduNote) lines.push(`\\newline\\textit{\\small ${esc(eduNote)}}`);
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const lis = sec.querySelectorAll('li') as any[];
       if (lis.length) {
