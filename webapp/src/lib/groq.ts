@@ -4,7 +4,12 @@ const GROQ_URL          = 'https://api.groq.com/openai/v1/chat/completions';
 const GROQ_MODEL_FAST   = 'llama-3.1-8b-instant';    // 131K TPM — for small tasks
 const GROQ_MODEL_SMART  = 'llama-3.3-70b-versatile'; // 6K TPM  — for tailoring only
 const OPENROUTER_URL    = 'https://openrouter.ai/api/v1/chat/completions';
-const OPENROUTER_MODEL  = 'google/gemini-2.0-flash-001'; // fast, cheap, high quality via Google AI Studio
+// Cascade of OR models tried in order — each has independent rate limits
+const OPENROUTER_MODELS = [
+  'google/gemini-2.0-flash-001',      // primary — fast, high quality
+  'google/gemini-flash-1.5',          // fallback 1 — older but separate quota
+  'meta-llama/llama-3.1-8b-instruct:free', // fallback 2 — always free, no quota
+];
 
 async function callLLM(
   url: string,
@@ -39,32 +44,42 @@ async function callLLM(
 
 async function callOpenRouter(system: string, user: string, maxTokens: number): Promise<string> {
   if (!OPENROUTER_KEY) throw new Error('Groq rate limited and OPENROUTER_API_KEY not set');
-  console.warn('[groq] Falling back to OpenRouter');
-  // Retry OpenRouter once on 429 with a short wait
-  for (let attempt = 0; attempt < 2; attempt++) {
-    try {
-      return await callLLM(
-        OPENROUTER_URL, OPENROUTER_MODEL,
-        {
-          Authorization: `Bearer ${OPENROUTER_KEY}`,
-          'HTTP-Referer': process.env.SITE_URL ?? 'https://jobtailor.in',
-          'X-Title': 'Resume Tailor',
-        },
-        system, user, Math.min(maxTokens, 8000),
-      );
-    } catch (e: unknown) {
-      const msg = e instanceof Error ? e.message : String(e);
-      if (msg === 'RATE_LIMIT' || msg.includes('429')) {
-        if (attempt === 0) {
-          await new Promise(r => setTimeout(r, 5000));
-          continue;
+  const orHeaders = {
+    Authorization: `Bearer ${OPENROUTER_KEY}`,
+    'HTTP-Referer': process.env.SITE_URL ?? 'https://jobtailor.in',
+    'X-Title': 'Resume Tailor',
+  };
+  const cap = Math.min(maxTokens, 8000);
+
+  // Try each model in cascade — independent quotas, so one will almost always work
+  for (const model of OPENROUTER_MODELS) {
+    console.warn('[groq] Falling back to OpenRouter model:', model);
+    for (let attempt = 0; attempt < 2; attempt++) {
+      try {
+        return await callLLM(OPENROUTER_URL, model, orHeaders, system, user, cap);
+      } catch (e: unknown) {
+        const msg = e instanceof Error ? e.message : String(e);
+        if (msg === 'RATE_LIMIT' || msg.includes('429')) {
+          if (attempt === 0) {
+            await new Promise(r => setTimeout(r, 4000));
+            continue;
+          }
+          // This model is exhausted → try the next one
+          console.warn('[groq] OpenRouter model rate-limited, trying next:', model);
+          break;
         }
-        throw new Error('Rate limited on all providers — please wait a minute and try again');
+        throw e; // non-429 error — propagate
       }
-      throw e;
     }
   }
-  throw new Error('Rate limited on all providers — please wait a minute and try again');
+
+  // All OpenRouter models exhausted — last resort: Groq fast model (131K TPM, almost never limited)
+  console.warn('[groq] All OpenRouter models rate-limited — falling back to Groq fast model');
+  return callLLM(
+    GROQ_URL, GROQ_MODEL_FAST,
+    { Authorization: `Bearer ${GROQ_API_KEY}` },
+    system, user, Math.min(maxTokens, 8000),
+  );
 }
 
 async function callGroq(
@@ -107,8 +122,7 @@ export async function groq(system: string, user: string, maxTokens = 2000): Prom
 
 /**
  * Large-input tasks (HTML editing, cover letters).
- * Routes directly to OpenRouter (no TPM limits on paid tier).
- * Falls back to Groq smart model if OpenRouter unavailable.
+ * Routes directly to OpenRouter cascade, falls back to Groq smart → fast.
  */
 export async function groqLarge(system: string, user: string, maxTokens = 6000): Promise<string> {
   if (OPENROUTER_KEY) return callOpenRouter(system, user, maxTokens);
