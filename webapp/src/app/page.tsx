@@ -42,6 +42,12 @@ interface OutreachResult {
   linkedin: { connectNote: string; dm: string };
 }
 
+interface WellfoundResult {
+  company: string;
+  role: string;
+  answers: { interests: string; whyFit: string };
+}
+
 type Message =
   | { type: 'user';         text: string }
   | { type: 'thinking';     steps: Step[] }
@@ -49,8 +55,9 @@ type Message =
   | { type: 'answer';       text: string }
   | { type: 'edited';       summary: string }
   | { type: 'pending-edit'; pendingHtml: string; changes: BulletChange[] }
-  | { type: 'cover-letter'; company: string; role: string }
-  | { type: 'error';        text: string };
+  | { type: 'cover-letter';     company: string; role: string }
+  | { type: 'wellfound-result'; result: WellfoundResult }
+  | { type: 'error';            text: string };
 
 /* ─── Helpers ────────────────────────────────────────────────────────────── */
 const isUrl = (s: string) => /^https?:\/\//i.test(s.trim());
@@ -928,6 +935,8 @@ export default function Home() {
   const bottomRef                       = useRef<HTMLDivElement>(null);
   const textareaRef                     = useRef<HTMLTextAreaElement>(null);
   const fileInputRef                    = useRef<HTMLInputElement>(null);
+  const [wfMode, setWfMode]             = useState(false);
+  const [wfCopied, setWfCopied]         = useState<string | null>(null);
 
   useEffect(() => { bottomRef.current?.scrollIntoView({ behavior: 'smooth' }); }, [messages]);
 
@@ -937,6 +946,12 @@ export default function Home() {
     setInput('');
     if (textareaRef.current) textareaRef.current.style.height = 'auto';
     setLoading(true);
+
+    // ── Wellfound Quick Apply mode ─────────────────────────────────────────
+    if (wfMode) {
+      await handleWellfoundSubmit(text);
+      return;
+    }
 
     setMessages(prev => [...prev, { type: 'user', text }]);
     const thinkingIdx = messages.length + 1;
@@ -1233,6 +1248,86 @@ export default function Home() {
     e.target.value = ''; // reset so same file can be re-selected
   }
 
+  async function handleWellfoundSubmit(jdText: string) {
+    // Note: loading is already true, set by handleSubmit before branching here
+    setMessages(prev => [...prev, { type: 'user', text: jdText }]);
+    const thinkingIdx = messages.length + 1;
+    setMessages(prev => [...prev, { type: 'thinking', steps: [] }]);
+
+    const addWfStep = (msg: string, done = false) => setMessages(prev => prev.map((m, i) => {
+      if (i !== thinkingIdx || m.type !== 'thinking') return m;
+      const id = msg.slice(0, 40);
+      const exists = m.steps.find(s => s.id === id);
+      if (exists) return { ...m, steps: m.steps.map(s => s.id === id ? { ...s, done: true } : s) };
+      return { ...m, steps: [...m.steps, { id, message: msg, done }] };
+    }));
+
+    let jd = jdText;
+    if (isUrl(jdText)) {
+      const hostname = new URL(jdText).hostname;
+      addWfStep(`Fetching from ${hostname}…`);
+      try {
+        const r = await fetch('/api/fetch-jd', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ url: jdText }),
+        });
+        const d = await r.json();
+        if (d.error) throw new Error(d.error);
+        jd = d.jd;
+        addWfStep(`Fetching from ${hostname}…`, true);
+      } catch (e) {
+        setMessages(prev => prev.map((m, i) => i === thinkingIdx ? { type: 'error' as const, text: `Failed to fetch: ${e}` } : m));
+        setLoading(false);
+        return;
+      }
+    }
+
+    try {
+      const res = await fetch('/api/wellfound', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ jd }),
+      });
+      const reader = res.body!.getReader();
+      const decoder = new TextDecoder();
+      let buf = '';
+      let event = '';
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        buf += decoder.decode(value, { stream: true });
+        const lines = buf.split('\n');
+        buf = lines.pop() ?? '';
+        for (const line of lines) {
+          if (line.startsWith('event: ')) { event = line.slice(7).trim(); continue; }
+          if (!line.startsWith('data: ')) continue;
+          const data = JSON.parse(line.slice(6));
+          if (event === 'step')     addWfStep(data.message);
+          if (event === 'detected') addWfStep(`${data.company} — ${data.role}`, true);
+          if (event === 'done') {
+            setMessages(prev => prev.map((m, i) =>
+              i === thinkingIdx && m.type === 'thinking'
+                ? { ...m, steps: m.steps.map(s => ({ ...s, done: true })) }
+                : m
+            ));
+            setMessages(prev => [...prev, {
+              type: 'wellfound-result' as const,
+              result: { company: data.company, role: data.role, answers: data.answers },
+            }]);
+          }
+          if (event === 'error') {
+            setMessages(prev => prev.map((m, i) => i === thinkingIdx ? { type: 'error' as const, text: data.message } : m));
+          }
+        }
+      }
+    } catch (e) {
+      setMessages(prev => prev.map((m, i) => i === thinkingIdx ? { type: 'error' as const, text: String(e) } : m));
+    }
+    setLoading(false);
+  }
+
   const showSplit = preview !== null;
 
   return (
@@ -1367,6 +1462,42 @@ export default function Home() {
                   </div>
                 </div>
               )}
+              {m.type === 'wellfound-result' && (
+                <div style={{ display: 'flex', gap: 9 }}>
+                  <div style={{ width: 26, height: 26, borderRadius: '50%', background: '#2a1206', border: '1px solid #7c2d12', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, flexShrink: 0, marginTop: 1 }}>⚡</div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 10, maxWidth: '92%' }}>
+                    <div style={{ fontSize: 11, color: '#888' }}>
+                      ⚡ Wellfound Quick Apply · <strong style={{ color: '#ccc' }}>{m.result.company}</strong> — <span style={{ color: '#999' }}>{m.result.role}</span>
+                    </div>
+                    {/* Interests card */}
+                    <div style={{ background: '#1c1208', border: '1px solid #7c2d12', borderRadius: 10, padding: '12px 14px' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 8, marginBottom: 8 }}>
+                        <span style={{ color: '#fb923c', fontWeight: 600, fontSize: 12, lineHeight: 1.4 }}>What interests you about working at {m.result.company}?</span>
+                        <button
+                          onClick={() => { navigator.clipboard.writeText(m.result.answers.interests).catch(() => {}); setWfCopied(`int-${i}`); setTimeout(() => setWfCopied(null), 1500); }}
+                          style={{ background: '#2a1a0a', border: '1px solid #57534e', borderRadius: 6, color: wfCopied === `int-${i}` ? '#4ade80' : '#d6d3d1', fontSize: 11, padding: '2px 9px', cursor: 'pointer', flexShrink: 0 }}
+                        >
+                          {wfCopied === `int-${i}` ? 'Copied!' : '📋 Copy'}
+                        </button>
+                      </div>
+                      <p style={{ color: '#d6d3d1', fontSize: 12, lineHeight: 1.65, margin: 0 }}>{m.result.answers.interests}</p>
+                    </div>
+                    {/* Why fit card */}
+                    <div style={{ background: '#1c1208', border: '1px solid #7c2d12', borderRadius: 10, padding: '12px 14px' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 8, marginBottom: 8 }}>
+                        <span style={{ color: '#fb923c', fontWeight: 600, fontSize: 12 }}>Why are you a good fit for this role?</span>
+                        <button
+                          onClick={() => { navigator.clipboard.writeText(m.result.answers.whyFit).catch(() => {}); setWfCopied(`fit-${i}`); setTimeout(() => setWfCopied(null), 1500); }}
+                          style={{ background: '#2a1a0a', border: '1px solid #57534e', borderRadius: 6, color: wfCopied === `fit-${i}` ? '#4ade80' : '#d6d3d1', fontSize: 11, padding: '2px 9px', cursor: 'pointer', flexShrink: 0 }}
+                        >
+                          {wfCopied === `fit-${i}` ? 'Copied!' : '📋 Copy'}
+                        </button>
+                      </div>
+                      <p style={{ color: '#d6d3d1', fontSize: 12, lineHeight: 1.65, margin: 0 }}>{m.result.answers.whyFit}</p>
+                    </div>
+                  </div>
+                </div>
+              )}
               {m.type === 'error' && (
                 <div style={{ display: 'flex', gap: 9 }}>
                   <div style={{ width: 26, height: 26, borderRadius: '50%', background: '#2a1212', border: '1px solid #3d1a1a', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
@@ -1392,7 +1523,22 @@ export default function Home() {
         </div>
 
         <div style={{ padding: '10px 16px 14px', borderTop: '1px solid #1a1a1a' }}>
-          <div style={{ display: 'flex', gap: 8, background: '#161616', border: '1px solid #222', borderRadius: 11, padding: '7px 7px 7px 13px', alignItems: 'flex-end' }}>
+          {/* Mode toggle pills */}
+          <div style={{ display: 'flex', gap: 6, marginBottom: 8 }}>
+            <button
+              onClick={() => setWfMode(false)}
+              style={{ background: !wfMode ? '#6366f1' : '#1a1a1a', color: !wfMode ? '#fff' : '#555', border: `1px solid ${!wfMode ? '#6366f1' : '#2a2a2a'}`, borderRadius: 20, padding: '4px 12px', fontSize: 11, fontWeight: 600, cursor: 'pointer', transition: 'all 0.15s' }}
+            >
+              ✨ Resume Tailor
+            </button>
+            <button
+              onClick={() => setWfMode(true)}
+              style={{ background: wfMode ? '#f97316' : '#1a1a1a', color: wfMode ? '#fff' : '#555', border: `1px solid ${wfMode ? '#f97316' : '#2a2a2a'}`, borderRadius: 20, padding: '4px 12px', fontSize: 11, fontWeight: 600, cursor: 'pointer', transition: 'all 0.15s' }}
+            >
+              ⚡ Wellfound Quick Apply
+            </button>
+          </div>
+          <div style={{ display: 'flex', gap: 8, background: '#161616', border: `1px solid ${wfMode ? '#7c2d12' : '#222'}`, borderRadius: 11, padding: '7px 7px 7px 13px', alignItems: 'flex-end', transition: 'border-color 0.15s' }}>
             <input
               ref={fileInputRef}
               type="file"
@@ -1414,7 +1560,7 @@ export default function Home() {
               onChange={e => setInput(e.target.value)}
               onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSubmit(); } }}
               onInput={e => { const t = e.currentTarget; t.style.height = 'auto'; t.style.height = `${Math.min(t.scrollHeight, 300)}px`; }}
-              placeholder={preview ? 'Edit resume, ask a question, or paste a new JD/URL...' : 'Paste job URL or description...'}
+              placeholder={wfMode ? 'Paste Wellfound JD or URL — get application answers in ~10s...' : preview ? 'Edit resume, ask a question, or paste a new JD/URL...' : 'Paste job URL or description...'}
               rows={1}
               disabled={loading}
               style={{ flex: 1, background: 'transparent', border: 'none', outline: 'none', color: '#e8e8e8', fontSize: 13, resize: 'none', maxHeight: 300, lineHeight: 1.5, fontFamily: 'inherit', paddingTop: 3 }}
@@ -1422,12 +1568,14 @@ export default function Home() {
             <button
               onClick={handleSubmit}
               disabled={loading || !input.trim()}
-              style={{ width: 32, height: 32, borderRadius: 7, background: loading || !input.trim() ? '#1e1e1e' : '#6366f1', border: 'none', cursor: loading || !input.trim() ? 'default' : 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}
+              style={{ width: 32, height: 32, borderRadius: 7, background: loading || !input.trim() ? '#1e1e1e' : wfMode ? '#f97316' : '#6366f1', border: 'none', cursor: loading || !input.trim() ? 'default' : 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}
             >
               {loading ? <Loader2 size={14} color="#444" className="animate-spin" /> : <Send size={14} color={input.trim() ? '#fff' : '#444'} />}
             </button>
           </div>
-          <div style={{ fontSize: 10, color: '#2a2a2a', marginTop: 5, textAlign: 'center' }}>Enter to send · Shift+Enter for newline · 📎 upload .txt JD</div>
+          <div style={{ fontSize: 10, color: '#2a2a2a', marginTop: 5, textAlign: 'center' }}>
+            {wfMode ? '⚡ Wellfound mode — no resume tailoring, just quick answers · Enter to send' : 'Enter to send · Shift+Enter for newline · 📎 upload .txt JD'}
+          </div>
         </div>
       </div>
 
