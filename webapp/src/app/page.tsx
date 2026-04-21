@@ -453,6 +453,67 @@ function PreviewPanel({ result, coverLetterHtml, initialTab = 'resume', onClose,
     }
   }
 
+  /** Open the tailored resume directly in Overleaf.
+   *  - Public blob URL  → snip_uri  (Overleaf fetches the file)
+   *  - data: URL        → form POST with snip field (no blob needed)
+   */
+  async function openInOverleaf() {
+    if (!result.texUrl) return;
+
+    if (!result.texUrl.startsWith('data:')) {
+      // Blob URL available — use snip_uri (instant)
+      window.open(
+        `https://www.overleaf.com/docs?snip_uri=${encodeURIComponent(result.texUrl)}`,
+        '_blank',
+        'noopener,noreferrer',
+      );
+      return;
+    }
+
+    // data: URL — decode the base64 LaTeX and POST it directly to Overleaf
+    let latex: string;
+    try {
+      const b64 = result.texUrl.replace(/^data:text\/plain;base64,/, '');
+      latex = atob(b64);
+    } catch {
+      // Fallback: re-generate via /api/latex
+      try {
+        const res = await fetch('/api/latex', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ html: activeHtml }),
+        });
+        latex = await res.text();
+      } catch {
+        alert('Could not prepare LaTeX for Overleaf — try the LaTeX download button instead.');
+        return;
+      }
+    }
+
+    // Form-POST approach: Overleaf accepts a `snip` field with raw LaTeX
+    const form = document.createElement('form');
+    form.method = 'POST';
+    form.action = 'https://www.overleaf.com/docs';
+    form.target = '_blank';
+    form.rel    = 'noopener noreferrer';
+
+    const snipInput = document.createElement('input');
+    snipInput.type  = 'hidden';
+    snipInput.name  = 'snip';
+    snipInput.value = latex;
+    form.appendChild(snipInput);
+
+    const typeInput = document.createElement('input');
+    typeInput.type  = 'hidden';
+    typeInput.name  = 'snip_type';
+    typeInput.value = 'main.tex';
+    form.appendChild(typeInput);
+
+    document.body.appendChild(form);
+    form.submit();
+    document.body.removeChild(form);
+  }
+
   function handleDownloadTxt() {
     const slug = getSlug();
 
@@ -612,16 +673,14 @@ function PreviewPanel({ result, coverLetterHtml, initialTab = 'resume', onClose,
             <button onClick={handleDownloadLatex} title="LaTeX source — upload to Overleaf for premium PDF" style={{ background: '#1a2e1a', color: '#86efac', border: '1px solid #166534', borderRadius: 8, padding: '7px 14px', fontSize: 13, fontWeight: 500, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6 }}>
               <Download size={13} /> LaTeX
             </button>
-            {result.texUrl && !result.texUrl.startsWith('data:') && (
-              <a
-                href={`https://www.overleaf.com/docs?snip_uri=${encodeURIComponent(result.texUrl)}`}
-                target="_blank"
-                rel="noopener noreferrer"
+            {result.texUrl && (
+              <button
+                onClick={openInOverleaf}
                 title="Open this resume in Overleaf — compile to get a premium PDF"
-                style={{ background: '#1a3a1a', color: '#4ade80', border: '1px solid #166534', borderRadius: 8, padding: '7px 14px', fontSize: 13, fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6, textDecoration: 'none' }}
+                style={{ background: '#1a3a1a', color: '#4ade80', border: '1px solid #166534', borderRadius: 8, padding: '7px 14px', fontSize: 13, fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6 }}
               >
                 ↗ Overleaf
-              </a>
+              </button>
             )}
             <button onClick={handleDownloadTxt} title="Plain text — best for Workday / ATS form parsing" style={{ background: '#1e293b', color: '#64748b', border: '1px solid #334155', borderRadius: 8, padding: '7px 14px', fontSize: 13, fontWeight: 500, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6 }}>
               <Download size={13} /> TXT

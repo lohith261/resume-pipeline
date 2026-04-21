@@ -122,6 +122,7 @@ export async function POST(req: NextRequest) {
 
         if (process.env.BLOB_READ_WRITE_TOKEN) {
           // Production: store HTML + .tex in Vercel Blob (public access required)
+          console.log('[blob] token present — attempting public put for slug:', slug);
           try {
             const [htmlBlob, texBlob] = await Promise.all([
               put(`tailored/${slug}/${fileName}`, htmlWithBase, {
@@ -137,13 +138,16 @@ export async function POST(req: NextRequest) {
             ]);
             htmlUrl = htmlBlob.url;
             texUrl  = texBlob.url;
-          } catch {
-            // Blob store is private-only — fall back to data: URLs (Overleaf button hidden)
+            console.log('[blob] upload OK — texUrl:', texUrl);
+          } catch (blobErr) {
+            // Blob store is private-only — fall back to data: URLs
+            console.warn('[blob] upload failed (private-only store?):', blobErr instanceof Error ? blobErr.message : String(blobErr));
             htmlUrl = `data:text/html;base64,${Buffer.from(htmlWithBase).toString('base64')}`;
             texUrl  = `data:text/plain;base64,${Buffer.from(latexContent).toString('base64')}`;
           }
         } else {
-          // Dev: store locally via data URLs (client renders inline / downloads)
+          // Dev / no blob token: use data: URLs (Overleaf form-POST still works client-side)
+          console.log('[blob] BLOB_READ_WRITE_TOKEN not set — using data: URLs');
           htmlUrl = `data:text/html;base64,${Buffer.from(htmlWithBase).toString('base64')}`;
           texUrl  = `data:text/plain;base64,${Buffer.from(latexContent).toString('base64')}`;
         }
