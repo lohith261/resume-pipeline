@@ -22,11 +22,13 @@ interface Classification { type: ResumeType; confidence: number; reasoning: stri
 const BASE_LABELS: Record<ResumeType, string> = { ai_engineer: 'AI Engineer', data_analyst: 'Data Analyst', data_engineer: 'Data Engineer', hybrid: 'Hybrid' };
 const BASE_COLORS: Record<ResumeType, string> = { ai_engineer: '#6366f1', data_analyst: '#0ea5e9', data_engineer: '#10b981', hybrid: '#f59e0b' };
 
+interface TaggedKeyword { kw: string; niche: boolean; }
+
 interface TailorResult {
   company: string; role: string;
   html: string; htmlUrl: string; texUrl?: string;
   before: CoverageResult; after: CoverageResult;
-  keywords: string[]; slug: string;
+  keywords: TaggedKeyword[]; slug: string;
   research?: string;
   changes?: BulletChange[];
   classification?: Classification;
@@ -108,6 +110,8 @@ function ResultCard({ result, onView, onRetailor }: { result: TailorResult; onVi
   const shownCovered = kwExpanded ? covered : covered.slice(0, PREVIEW);
   const shownMissing = kwExpanded ? missing : missing.slice(0, PREVIEW);
   const hiddenCount = (covered.length - shownCovered.length) + (missing.length - shownMissing.length);
+  // Niche (rare/specialist) keywords — high ATS signal, shown with ⭐
+  const nicheSet = new Set(result.keywords.filter(k => k.niche).map(k => k.kw));
   const changes = result.changes ?? [];
   const modified = changes.filter(c => c.type === 'modified');
   const added    = changes.filter(c => c.type === 'added');
@@ -165,7 +169,7 @@ function ResultCard({ result, onView, onRetailor }: { result: TailorResult; onVi
           </div>
           {onRetailor && !editingKw && (
             <button
-              onClick={() => { setEditedKws(result.keywords); setEditingKw(true); }}
+              onClick={() => { setEditedKws(result.keywords.map(k => k.kw)); setEditingKw(true); }}
               style={{ background: 'transparent', border: '1px solid #2a3a5a', color: '#60a5fa', borderRadius: 4, padding: '1px 8px', fontSize: 10, cursor: 'pointer' }}
             >
               ✏️ Edit keywords
@@ -209,12 +213,24 @@ function ResultCard({ result, onView, onRetailor }: { result: TailorResult; onVi
           </div>
         ) : (
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>
-            {shownCovered.map((kw, i) => (
-              <span key={`c${i}`} style={{ background: '#0a1f12', color: '#4ade80', border: '1px solid #1a4a2a', borderRadius: 4, padding: '1px 7px', fontSize: 11 }}>{kw}</span>
-            ))}
-            {shownMissing.map((kw, i) => (
-              <span key={`m${i}`} style={{ background: '#2a1212', color: '#f87171', border: '1px solid #3d1515', borderRadius: 4, padding: '1px 7px', fontSize: 11 }}>{kw}</span>
-            ))}
+            {shownCovered.map((kw, i) => {
+              const isNiche = nicheSet.has(kw);
+              return (
+                <span key={`c${i}`} title={isNiche ? '⭐ Rare keyword — high ATS signal' : undefined}
+                  style={{ background: isNiche ? '#0a1f20' : '#0a1f12', color: isNiche ? '#34d399' : '#4ade80', border: `1px solid ${isNiche ? '#1a5a3a' : '#1a4a2a'}`, borderRadius: 4, padding: '1px 7px', fontSize: 11 }}>
+                  {isNiche ? '⭐ ' : ''}{kw}
+                </span>
+              );
+            })}
+            {shownMissing.map((kw, i) => {
+              const isNiche = nicheSet.has(kw);
+              return (
+                <span key={`m${i}`} title={isNiche ? '⭐ Rare keyword — high ATS signal — prioritised for injection' : undefined}
+                  style={{ background: isNiche ? '#2a1a10' : '#2a1212', color: isNiche ? '#fb923c' : '#f87171', border: `1px solid ${isNiche ? '#5a2a10' : '#3d1515'}`, borderRadius: 4, padding: '1px 7px', fontSize: 11 }}>
+                  {isNiche ? '⭐ ' : ''}{kw}
+                </span>
+              );
+            })}
             {!kwExpanded && hiddenCount > 0 && (
               <button onClick={() => setKwExpanded(true)} style={{ background: 'transparent', border: '1px solid #2a2a2a', color: '#555', borderRadius: 4, padding: '1px 7px', fontSize: 11, cursor: 'pointer' }}>
                 +{hiddenCount} more

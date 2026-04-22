@@ -15,11 +15,16 @@ export interface BulletChange {
   after: string;     // new bullet text
 }
 
+export interface TaggedKeyword {
+  kw: string;
+  niche: boolean; // true = rare/specialised (high ATS signal); false = common/ubiquitous
+}
+
 export interface TailorResult {
   html: string;
   before: CoverageResult;
   after: CoverageResult;
-  keywords: string[];
+  keywords: TaggedKeyword[];
   company: string;
   role: string;
   research: string;
@@ -200,6 +205,29 @@ export async function extractKeywords(jd: string): Promise<string[]> {
   return deduplicateKeywords(raw);
 }
 
+/**
+ * Classify extracted keywords as niche (rare/specialist — high ATS signal) vs common.
+ * Niche: dbt, Airflow, Kafka, Spark, RAG, Redshift, Snowflake, Kubernetes, Terraform, MLOps, LangChain…
+ * Common: Python, SQL, AWS, Git, REST, JavaScript, Docker, React, CI/CD…
+ */
+export async function classifyKeywords(keywords: string[]): Promise<TaggedKeyword[]> {
+  if (keywords.length === 0) return [];
+  const res = await groqFast(
+    'Classify each keyword as niche (rare/specialised — dbt, Airflow, Kafka, Spark, RAG, Redshift, Snowflake, BigQuery, Kubernetes, Terraform, MLOps, LangChain, Pinecone, Flink, EUV, FinFET, Qdrant) or common (ubiquitous across many JDs — Python, SQL, AWS, Git, REST, JavaScript, TypeScript, Java, Docker, React, Node.js, CI/CD, Linux, API). Return ONLY a JSON array with every input keyword: [{"kw":"...","niche":true/false}].',
+    JSON.stringify(keywords),
+    Math.min(keywords.length * 20 + 100, 800),
+  );
+  try {
+    const clean = res.replace(/```(?:json)?|```/g, '').trim();
+    const parsed: TaggedKeyword[] = JSON.parse(clean);
+    if (Array.isArray(parsed) && parsed.every(x => typeof x.kw === 'string')) {
+      const mapped = new Map(parsed.map(x => [x.kw.toLowerCase(), x.niche ?? false]));
+      return keywords.map(kw => ({ kw, niche: mapped.get(kw.toLowerCase()) ?? false }));
+    }
+  } catch { /* fall through to safe default */ }
+  return keywords.map(kw => ({ kw, niche: false }));
+}
+
 /** Remove near-duplicate keywords (e.g. "React" + "ReactJS") using 80% token overlap. */
 export function deduplicateKeywords(keywords: string[]): string[] {
   const kept: string[] = [];
@@ -349,6 +377,7 @@ CRITICAL RULES:
 10. Every bullet MUST start with a strong past-tense action verb (Architected, Engineered, Built, Designed, Deployed, Integrated, Spearheaded, Streamlined, Delivered, Surfaced, Automated) — never start with "Responsible for", "Worked on", "Helped", or passive phrasing
 11. If you edit a bullet, verify it still contains at least one quantified outcome (%, number, time saved, scale) — if the original had one, preserve or strengthen it; never edit it out
 12. On the second pass, prioritise placing keywords in the top 2–3 bullets of the most recent role, as recruiters spend the first 7 seconds scanning that zone
+13. ⚠️ ATS EXACT MATCH: Use the EXACT abbreviation/term as it appears in the keywords list — never expand it. Write "MLOps" not "Machine Learning Operations", "LLM" not "large language model", "dbt" not "data build tool", "RAG" not "retrieval-augmented generation". ATS parsers do literal string matching.
 ${country === 'de' ? `
 13. GERMANY MARKET: Keep formal tone. Ensure every metric is precise. Do not remove the photo placeholder box or the Anabin degree note.` : ''}
 ${country === 'nl' ? `
@@ -393,18 +422,28 @@ export async function runPipeline(
   }
 
   let keywords: string[];
+  let taggedKeywords: TaggedKeyword[];
   if (confirmedKeywords && confirmedKeywords.length > 0) {
-    // User confirmed (possibly edited) keyword set — skip LLM extraction
+    // User confirmed (possibly edited) keyword set — skip LLM extraction but still classify for niche flags
     keywords = confirmedKeywords;
-    onStep('keywords', { count: keywords.length, keywords, confirmed: true });
+    taggedKeywords = await classifyKeywords(keywords);
+    onStep('keywords', { count: keywords.length, keywords: taggedKeywords, confirmed: true });
   } else {
     onStep('extracting');
     keywords = await extractKeywords(jd);
-    onStep('keywords', { count: keywords.length, keywords });
+    taggedKeywords = await classifyKeywords(keywords);
+    onStep('keywords', { count: keywords.length, keywords: taggedKeywords });
     if (keywords.length === 0) {
       onStep('warn', { id: 'warn_keywords', message: '⚠ No keywords extracted — JD may be too short or in an unexpected format' });
     }
   }
+
+  // Helper: sort a missing-keyword list so niche (high-ATS-signal) terms come first
+  const nicheSet = new Set(taggedKeywords.filter(t => t.niche).map(t => t.kw));
+  const nicheFirst = (kws: string[]) => [
+    ...kws.filter(k => nicheSet.has(k)),
+    ...kws.filter(k => !nicheSet.has(k)),
+  ];
 
   const baseHtml = getBaseHtml(classification.type, classification.country);
   onStep('base_selected', { type: classification.type, country: classification.country ?? null });
@@ -428,14 +467,14 @@ export async function runPipeline(
   // (threshold lowered from 90% to 0 missing — no holding back)
   if (after.missing.length > 0) {
     onStep('tailoring', { missing: after.missing.length });
-    html = await tailorHtml(html, after.missing, company, role, research, false, classification.country);
+    html = await tailorHtml(html, nicheFirst(after.missing), company, role, research, false, classification.country);
     after = scoreCoverage(keywords, html);
     onStep('tailored', { pct: after.pct });
 
     // Second pass if meaningful keywords still missing
     if (after.pct < 92 && after.missing.length > 0) {
       onStep('tailoring2', { missing: after.missing.length });
-      html = await tailorHtml(html, after.missing, company, role, research, true, classification.country);
+      html = await tailorHtml(html, nicheFirst(after.missing), company, role, research, true, classification.country);
       after = scoreCoverage(keywords, html);
       onStep('tailored', { pct: after.pct });
     }
@@ -444,7 +483,7 @@ export async function runPipeline(
   }
 
   const changes = computeChanges(baseHtml, html);
-  return { html, before, after, keywords, company, role, research, changes, classification };
+  return { html, before, after, keywords: taggedKeywords, company, role, research, changes, classification };
 }
 
 export { slugify };
