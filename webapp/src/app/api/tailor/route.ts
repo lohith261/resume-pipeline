@@ -68,7 +68,7 @@ export async function POST(req: NextRequest) {
           let message = step;
           if (step === 'classifying')     message = 'Detecting role type...';
           else if (step === 'classified') {
-            const typeLabel: Record<string, string> = { ai_engineer: 'AI Engineer', data_analyst: 'Data Analyst', data_engineer: 'Data Engineer', hybrid: 'Hybrid' };
+            const typeLabel: Record<string, string> = { ai_engineer: 'AI Engineer', data_analyst: 'Data Analyst', data_engineer: 'Data Engineer', hybrid: 'Hybrid', universal: 'Universal' };
             const countryLabel: Record<string, string> = { de: 'Germany', nl: 'Netherlands', sg: 'Singapore', ae: 'UAE', jp: 'Japan', lu: 'Luxembourg', ie: 'Ireland' };
             const label = typeLabel[(d?.type as string) ?? 'hybrid'] ?? 'Hybrid';
             const pct   = Math.round(((d?.confidence as number) ?? 0.7) * 100);
@@ -76,7 +76,7 @@ export async function POST(req: NextRequest) {
             message = `${label} role (${pct}% confidence)${countryStr} — using ${label} base`;
           }
           else if (step === 'base_selected') {
-            const typeLabel: Record<string, string> = { ai_engineer: 'AI Engineer', data_analyst: 'Data Analyst', data_engineer: 'Data Engineer', hybrid: 'Hybrid' };
+            const typeLabel: Record<string, string> = { ai_engineer: 'AI Engineer', data_analyst: 'Data Analyst', data_engineer: 'Data Engineer', hybrid: 'Hybrid', universal: 'Universal' };
             const countryLabel: Record<string, string> = { de: 'Germany 🇩🇪', nl: 'Netherlands 🇳🇱', sg: 'Singapore 🇸🇬', ae: 'UAE 🇦🇪', jp: 'Japan 🇯🇵', lu: 'Luxembourg 🇱🇺 (DE base)', ie: 'Ireland 🇮🇪' };
             const roleStr    = typeLabel[(d?.type as string) ?? 'hybrid'] ?? 'Hybrid';
             const countryStr = d?.country ? countryLabel[d.country as string] ?? '' : 'Global 🌐';
@@ -92,7 +92,9 @@ export async function POST(req: NextRequest) {
           else if (step === 'researching') message = `Researching ${company}...`;
           else if (step === 'researched') message = 'Research complete';
           else if (step === 'summarizing') message = `Writing ${company}-specific summary...`;
-          else if (step === 'tailoring')  message = `Weaving in ${d?.missing ?? '?'} missing keywords...`;
+          else if (step === 'tailoring')  message = d?.universal
+            ? `Rewriting resume for ${role}...`
+            : `Weaving in ${d?.missing ?? '?'} missing keywords...`;
           else if (step === 'tailoring2') message = `2nd pass — ${d?.missing ?? '?'} keywords still missing...`;
           else if (step === 'tailored')   message = (d as Record<string,unknown>)?.skipped
             ? `Summary tailored · ${d?.pct ?? '?'}% coverage`

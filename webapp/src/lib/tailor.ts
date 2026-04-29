@@ -76,7 +76,7 @@ function slugify(text: string) {
   return text.toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_+|_+$/g, '');
 }
 
-export type ResumeType = 'ai_engineer' | 'data_analyst' | 'data_engineer' | 'hybrid';
+export type ResumeType = 'ai_engineer' | 'data_analyst' | 'data_engineer' | 'hybrid' | 'universal';
 export type CountryCode = 'de' | 'nl' | 'sg' | 'ae' | 'jp' | 'lu' | 'ie';
 
 export interface Classification {
@@ -91,17 +91,18 @@ const RESUME_FILES: Record<ResumeType, string> = {
   data_analyst:  'resume_data_analyst.html',
   data_engineer: 'resume_data_engineer.html',
   hybrid:        'resume_base.html',
+  universal:     'resume_base.html',  // reuse hybrid base — tailorUniversal rewrites everything
 };
 
 const COUNTRY_RESUME_FILES: Record<CountryCode, Record<ResumeType, string>> = {
-  de: { ai_engineer: 'resume_de_engineer.html', hybrid: 'resume_de_hybrid.html', data_analyst: 'resume_de_analyst.html', data_engineer: 'resume_de_data_engineer.html' },
-  nl: { ai_engineer: 'resume_nl_engineer.html', hybrid: 'resume_nl_hybrid.html', data_analyst: 'resume_nl_analyst.html', data_engineer: 'resume_nl_data_engineer.html' },
-  sg: { ai_engineer: 'resume_sg_engineer.html', hybrid: 'resume_sg_hybrid.html', data_analyst: 'resume_sg_analyst.html', data_engineer: 'resume_sg_data_engineer.html' },
-  ae: { ai_engineer: 'resume_ae_engineer.html', hybrid: 'resume_ae_hybrid.html', data_analyst: 'resume_ae_analyst.html', data_engineer: 'resume_ae_data_engineer.html' },
-  jp: { ai_engineer: 'resume_jp_engineer.html', hybrid: 'resume_jp_hybrid.html', data_analyst: 'resume_jp_analyst.html', data_engineer: 'resume_jp_data_engineer.html' },
+  de: { ai_engineer: 'resume_de_engineer.html', hybrid: 'resume_de_hybrid.html', data_analyst: 'resume_de_analyst.html', data_engineer: 'resume_de_data_engineer.html', universal: 'resume_de_hybrid.html' },
+  nl: { ai_engineer: 'resume_nl_engineer.html', hybrid: 'resume_nl_hybrid.html', data_analyst: 'resume_nl_analyst.html', data_engineer: 'resume_nl_data_engineer.html', universal: 'resume_nl_hybrid.html' },
+  sg: { ai_engineer: 'resume_sg_engineer.html', hybrid: 'resume_sg_hybrid.html', data_analyst: 'resume_sg_analyst.html', data_engineer: 'resume_sg_data_engineer.html', universal: 'resume_sg_hybrid.html' },
+  ae: { ai_engineer: 'resume_ae_engineer.html', hybrid: 'resume_ae_hybrid.html', data_analyst: 'resume_ae_analyst.html', data_engineer: 'resume_ae_data_engineer.html', universal: 'resume_ae_hybrid.html' },
+  jp: { ai_engineer: 'resume_jp_engineer.html', hybrid: 'resume_jp_hybrid.html', data_analyst: 'resume_jp_analyst.html', data_engineer: 'resume_jp_data_engineer.html', universal: 'resume_jp_hybrid.html' },
   // Luxembourg: uses DE base (same EU Blue Card scheme, similar professional norms)
-  lu: { ai_engineer: 'resume_de_engineer.html', hybrid: 'resume_de_hybrid.html', data_analyst: 'resume_de_analyst.html', data_engineer: 'resume_de_data_engineer.html' },
-  ie: { ai_engineer: 'resume_ie_engineer.html', hybrid: 'resume_ie_hybrid.html', data_analyst: 'resume_ie_analyst.html', data_engineer: 'resume_ie_data_engineer.html' },
+  lu: { ai_engineer: 'resume_de_engineer.html', hybrid: 'resume_de_hybrid.html', data_analyst: 'resume_de_analyst.html', data_engineer: 'resume_de_data_engineer.html', universal: 'resume_de_hybrid.html' },
+  ie: { ai_engineer: 'resume_ie_engineer.html', hybrid: 'resume_ie_hybrid.html', data_analyst: 'resume_ie_analyst.html', data_engineer: 'resume_ie_data_engineer.html', universal: 'resume_ie_hybrid.html' },
 };
 
 export function getBaseHtml(type: ResumeType = 'hybrid', country?: CountryCode | null): string {
@@ -118,13 +119,14 @@ export function getBaseHtml(type: ResumeType = 'hybrid', country?: CountryCode |
 export async function classifyJd(jd: string): Promise<Classification> {
   const res = await groqFast(
     `Classify this job description. Return ONLY valid JSON (no markdown):
-{"type":"ai_engineer|data_analyst|data_engineer|hybrid","confidence":0.0-1.0,"reasoning":"one sentence","country":"de|nl|sg|ae|jp|lu|ie|null"}
+{"type":"ai_engineer|data_analyst|data_engineer|hybrid|universal","confidence":0.0-1.0,"reasoning":"one sentence","country":"de|nl|sg|ae|jp|lu|ie|null"}
 
 type rules:
 - "ai_engineer" → primary focus on LLMs, RAG, LangChain, agents, GenAI, prompt engineering, inference
 - "data_analyst" → primary focus on SQL, Tableau, Power BI, analytics, dashboards, BI, reporting, A/B testing, business intelligence
 - "data_engineer" → primary focus on pipelines, ETL/ELT, Airflow, Spark, Kafka, dbt, data warehouse, Redshift/Snowflake/BigQuery, schema design, data contracts, orchestration, data quality frameworks, data lakes
 - "hybrid" → requires both AI engineering AND strong data/analytics skills equally
+- "universal" → role is non-technical or does not primarily focus on AI/ML, data analytics, or data engineering. Includes: marketing (performance, growth, brand, content, SEO/SEM), finance (FP&A, investment, banking, accounting), product management, HR/people ops, operations, consulting, sales/BD, legal, UX/design, healthcare, education, communications. Also use universal when the JD is ambiguous or when confidence in the four tech types is below 65%
 
 country rules (detect from location, company HQ, currency, office city, visa mentions):
 - "de" → Germany (Berlin, Munich, Hamburg, Frankfurt, GmbH, EUR salary, Blue Card mentioned)
@@ -141,7 +143,7 @@ country rules (detect from location, company HQ, currency, office city, visa men
   try {
     const clean = res.replace(/```(?:json)?|```/g, '').trim();
     const parsed = JSON.parse(clean);
-    const type = (['ai_engineer', 'data_analyst', 'data_engineer', 'hybrid'] as ResumeType[]).includes(parsed.type)
+    const type = (['ai_engineer', 'data_analyst', 'data_engineer', 'hybrid', 'universal'] as ResumeType[]).includes(parsed.type)
       ? parsed.type as ResumeType
       : 'hybrid';
     const validCountries: CountryCode[] = ['de', 'nl', 'sg', 'ae', 'jp', 'lu', 'ie'];
@@ -406,6 +408,69 @@ ${compressHtml(htmlForLlm)}`,
   return result;
 }
 
+/**
+ * Strips GitHub and LinkedIn contact-item divs from the base HTML.
+ * Done programmatically (pre-LLM) for reliability — more dependable than asking the LLM.
+ */
+function prepareUniversalBase(html: string): string {
+  return html
+    .replace(/<div class="contact-item">[\s\S]*?linkedin\.com[\s\S]*?<\/div>/gi, '')
+    .replace(/<div class="contact-item">[\s\S]*?github\.com[\s\S]*?<\/div>/gi, '');
+}
+
+/**
+ * Full resume rewrite for non-tech/universal roles via a single groqLarge call.
+ * Unlike standard tailoring (keyword injection), this COMPLETELY rewrites bullets,
+ * skills, summary and removes irrelevant sections for the target role.
+ */
+export async function tailorUniversal(
+  baseHtml: string,
+  company: string,
+  role: string,
+  research: string,
+  jd: string,
+  keywords: string[],
+): Promise<string> {
+  const tailored = await groqLarge(
+    'You are a professional resume writer specialising in career pivots and cross-industry transitions. Return ONLY the complete modified HTML — no explanation, no markdown fences.',
+    `You are completely rewriting this resume for a career pivot into a ${role} role at ${company}.
+
+Company Research:
+${research}
+
+Job Description (for context on tone and priorities):
+${jd.slice(0, 2000)}
+
+Keywords to incorporate naturally: ${keywords.slice(0, 30).join(', ')}
+
+TRANSFORMATION RULES — follow every one precisely:
+
+1. SUMMARY: Rewrite as a ${role} professional with a strong analytical background from enterprise software. Emphasise business impact, cross-functional collaboration, data-driven decision making. Remove LLM/RAG/software-engineering terms unless the JD specifically calls for them. Keep 2-3 tight sentences.
+
+2. EXPERIENCE BULLETS: Completely rewrite EVERY bullet to be a compelling, specific achievement for a ${role} professional. You MAY fabricate plausible, role-appropriate experience points — invent quantified wins that would impress a hiring manager for this exact role. The only hard constraints are: company name (ADP) and employment dates MUST stay accurate. Everything else — bullet content, metrics, achievements — should be freshly created for the target role. Example for marketing: "Launched multi-channel outreach programme targeting enterprise payroll buyers, driving 35% increase in qualified pipeline over two quarters." Make each bullet start with a strong past-tense action verb. Make each bullet specific and quantified.
+
+3. SKILLS: Replace tech-specific row names with role-relevant categories that fit ${role}. Surface transferable skills: data analysis, stakeholder communication, cross-functional delivery, SQL, reporting, process improvement, project management. Remove irrelevant dev-only tools. Keep Python and SQL only if relevant to the role.
+
+4. PROJECTS SECTION: If projects are purely coding apps with no clear ${role} relevance, REMOVE the ENTIRE <div class="section"> block that contains the Projects heading. If a project can be reframed as a business initiative relevant to ${role}, keep it with reframed text.
+
+5. CERTIFICATIONS: Remove purely technical certifications (IBM Data Engineering, Google AI Certificate, AWS certifications) unless directly relevant to ${role}. Keep academic scholarships and universally relevant awards.
+
+6. FABRICATION RULES: Company name (ADP) and employment dates MUST stay accurate. Everything else — bullet content, metrics, achievements, skills — should be invented to best fit ${role}. Make it convincing and specific.
+
+7. Page 1 must fit one A4 page. After removing sections the content is shorter — this is correct and expected.
+
+8. Return the COMPLETE modified HTML preserving all CSS classes, <style> blocks, and document structure. Do not omit any HTML tags.
+
+${compressHtml(baseHtml)}`,
+    8000,
+  );
+
+  return tailored
+    .replace(/^```(?:html)?\s*/m, '')
+    .replace(/\s*```$/m, '')
+    .trim();
+}
+
 export async function runPipeline(
   jd: string,
   company: string,
@@ -450,36 +515,48 @@ export async function runPipeline(
   const before = scoreCoverage(keywords, baseHtml);
   onStep('coverage_before', { pct: before.pct, missing: before.missing.length });
 
-  // Run research and summary tailoring in parallel — both are independent
+  // Research company — useful context for both standard and universal pipelines
   onStep('researching');
-  const [research] = await Promise.all([
-    researchCompany(company, role),
-  ]);
+  const research = await researchCompany(company, role);
   onStep('researched', { research });
 
-  // ── Always: rewrite summary for this specific company ──────────────────
-  onStep('summarizing');
-  let html = await tailorSummary(baseHtml, company, role, research);
+  let html: string;
+  let after: CoverageResult;
 
-  let after = scoreCoverage(keywords, html);
+  if (classification.type === 'universal') {
+    // ── Universal path: full rewrite for non-tech roles ──────────────────
+    // Strip GitHub/LinkedIn contacts before sending to LLM (more reliable than asking the LLM)
+    const strippedBase = prepareUniversalBase(baseHtml);
 
-  // ── Keyword tailoring: run whenever ANY keywords are missing ───────────
-  // (threshold lowered from 90% to 0 missing — no holding back)
-  if (after.missing.length > 0) {
-    onStep('tailoring', { missing: after.missing.length });
-    html = await tailorHtml(html, nicheFirst(after.missing), company, role, research, false, classification.country);
+    onStep('tailoring', { missing: keywords.length, universal: true });
+    html = await tailorUniversal(strippedBase, company, role, research, jd, keywords);
+    // Inject target-role subtitle under the name heading
+    html = injectTargetRole(html, role);
     after = scoreCoverage(keywords, html);
     onStep('tailored', { pct: after.pct });
+  } else {
+    // ── Standard path: summary rewrite + keyword injection ───────────────
+    onStep('summarizing');
+    html = await tailorSummary(baseHtml, company, role, research);
+    after = scoreCoverage(keywords, html);
 
-    // Second pass if meaningful keywords still missing
-    if (after.pct < 92 && after.missing.length > 0) {
-      onStep('tailoring2', { missing: after.missing.length });
-      html = await tailorHtml(html, nicheFirst(after.missing), company, role, research, true, classification.country);
+    // Keyword tailoring: run whenever ANY keywords are missing
+    if (after.missing.length > 0) {
+      onStep('tailoring', { missing: after.missing.length });
+      html = await tailorHtml(html, nicheFirst(after.missing), company, role, research, false, classification.country);
       after = scoreCoverage(keywords, html);
       onStep('tailored', { pct: after.pct });
+
+      // Second pass if meaningful keywords still missing
+      if (after.pct < 92 && after.missing.length > 0) {
+        onStep('tailoring2', { missing: after.missing.length });
+        html = await tailorHtml(html, nicheFirst(after.missing), company, role, research, true, classification.country);
+        after = scoreCoverage(keywords, html);
+        onStep('tailored', { pct: after.pct });
+      }
+    } else {
+      onStep('tailored', { pct: after.pct, skipped: true });
     }
-  } else {
-    onStep('tailored', { pct: after.pct, skipped: true });
   }
 
   const changes = computeChanges(baseHtml, html);
