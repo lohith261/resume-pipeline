@@ -447,19 +447,23 @@ TRANSFORMATION RULES — follow every one precisely:
 
 1. SUMMARY: Rewrite as a ${role} professional with a strong analytical background from enterprise software. Emphasise business impact, cross-functional collaboration, data-driven decision making. Remove LLM/RAG/software-engineering terms unless the JD specifically calls for them. Keep 2-3 tight sentences.
 
-2. EXPERIENCE BULLETS: Completely rewrite EVERY bullet to be a compelling, specific achievement for a ${role} professional. You MAY fabricate plausible, role-appropriate experience points — invent quantified wins that would impress a hiring manager for this exact role. The only hard constraints are: company name (ADP) and employment dates MUST stay accurate. Everything else — bullet content, metrics, achievements — should be freshly created for the target role. Example for marketing: "Launched multi-channel outreach programme targeting enterprise payroll buyers, driving 35% increase in qualified pipeline over two quarters." Make each bullet start with a strong past-tense action verb. Make each bullet specific and quantified.
+2. EXPERIENCE JOB TITLE: Change the job title inside the experience entry (the <strong> or heading that currently says "AI Engineer & Software Engineer" or similar) to a title that fits ${role} — e.g. "Business Analyst", "Senior Analyst", "Operations Analyst", or whatever most closely matches the target role. Company name (ADP) and dates stay unchanged.
 
-3. SKILLS: Replace tech-specific row names with role-relevant categories that fit ${role}. Surface transferable skills: data analysis, stakeholder communication, cross-functional delivery, SQL, reporting, process improvement, project management. Remove irrelevant dev-only tools. Keep Python and SQL only if relevant to the role.
+3. EXPERIENCE BULLETS: Completely rewrite EVERY bullet to be a compelling, specific achievement for a ${role} professional. You MAY fabricate plausible, role-appropriate experience points — invent quantified wins that would impress a hiring manager for this exact role. The only hard constraints are: company name (ADP) and employment dates MUST stay accurate. Everything else — bullet content, metrics, achievements — should be freshly created for the target role. Example for marketing: "Launched multi-channel outreach programme targeting enterprise payroll buyers, driving 35% increase in qualified pipeline over two quarters." Make each bullet start with a strong past-tense action verb. Make each bullet specific and quantified.
 
-4. PROJECTS SECTION: If projects are purely coding apps with no clear ${role} relevance, REMOVE the ENTIRE <div class="section"> block that contains the Projects heading. If a project can be reframed as a business initiative relevant to ${role}, keep it with reframed text.
+4. SKILLS SECTION ORDER: Move the entire Skills <div class="section"> block so it appears AFTER the Experience section, not before it. The final section order must be: Summary → Experience → Skills → (Projects if kept) → Education → Certifications.
 
-5. CERTIFICATIONS: Remove purely technical certifications (IBM Data Engineering, Google AI Certificate, AWS certifications) unless directly relevant to ${role}. Keep academic scholarships and universally relevant awards.
+5. SKILLS CONTENT: Replace tech-specific row names with role-relevant categories that fit ${role}. Keep category names SHORT — maximum 20 characters — so they fit the existing CSS column layout (e.g. "Core Skills", "Tools", "Soft Skills", "Domain", not long phrases like "Process Analysis & Design"). Surface transferable skills: data analysis, stakeholder communication, cross-functional delivery, SQL, reporting, process improvement, project management. Remove irrelevant dev-only tools.
 
-6. FABRICATION RULES: Company name (ADP) and employment dates MUST stay accurate. Everything else — bullet content, metrics, achievements, skills — should be invented to best fit ${role}. Make it convincing and specific.
+6. PROJECTS SECTION: If projects are purely coding apps with no clear ${role} relevance, REMOVE the ENTIRE <div class="section"> block that contains the Projects heading. If a project can be reframed as a business initiative relevant to ${role}, keep it with reframed text.
 
-7. Page 1 must fit one A4 page. After removing sections the content is shorter — this is correct and expected.
+7. CERTIFICATIONS: Remove purely technical certifications (IBM Data Engineering, Google AI Certificate, AWS certifications) unless directly relevant to ${role}. Keep academic scholarships and universally relevant awards.
 
-8. Return the COMPLETE modified HTML preserving all CSS classes, <style> blocks, and document structure. Do not omit any HTML tags.
+8. FABRICATION RULES: Company name (ADP) and employment dates MUST stay accurate. Everything else — job title, bullet content, metrics, achievements, skills — should be invented to best fit ${role}. Make it convincing and specific.
+
+9. Page 1 must fit one A4 page. After removing sections the content is shorter — this is correct and expected.
+
+10. Return the COMPLETE modified HTML preserving all CSS classes, <style> blocks, and document structure. Do not omit any HTML tags.
 
 ${compressHtml(baseHtml)}`,
     8000,
