@@ -6,8 +6,8 @@ const GROQ_MODEL_SMART  = 'llama-3.3-70b-versatile'; // 6K TPM  — for tailorin
 const OPENROUTER_URL    = 'https://openrouter.ai/api/v1/chat/completions';
 // Cascade of OR models tried in order — each has independent rate limits
 const OPENROUTER_MODELS = [
-  'google/gemini-2.0-flash-001',      // primary — fast, high quality
-  'google/gemini-flash-1.5',          // fallback 1 — older but separate quota
+  'google/gemini-2.0-flash-001',           // primary — fast, high quality
+  'google/gemini-2.0-flash-lite-001',      // fallback 1 — lighter variant, separate quota
   'meta-llama/llama-3.1-8b-instruct:free', // fallback 2 — always free, no quota
 ];
 
@@ -68,7 +68,12 @@ async function callOpenRouter(system: string, user: string, maxTokens: number): 
           console.warn('[groq] OpenRouter model rate-limited, trying next:', model);
           break;
         }
-        throw e; // non-429 error — propagate
+        // 404 = model deprecated/removed on OpenRouter → fall through to next model
+        if (msg.includes('404') || msg.toLowerCase().includes('no endpoints found')) {
+          console.warn('[groq] OpenRouter model not found (404), trying next:', model);
+          break;
+        }
+        throw e; // other errors — propagate
       }
     }
   }
