@@ -151,7 +151,7 @@
     <hr/>
     <p>
       Data Platform Engineer with 2+ years at ADP — architected Python ETL pipelines processing 10K+ payroll records/month across AWS Glue/Lambda/RDS, achieved 80% classification precision and 25% fewer false positives, and cut infrastructure costs 40%; open to Critical Skills Employment Permit (CSEP) sponsorship.
-      Independently shipped two production data platform products — <strong>Job Tailor</strong> (jobtailor.in) and <strong>Keen</strong>. Stack: Python, AWS, Node.js, React/TypeScript.
+      Independently shipped two production data platform products — <strong>FileVault</strong> and <strong>Keen</strong>. Stack: Python, AWS, Node.js, React/TypeScript.
     </p>
   </div>
 
@@ -196,19 +196,18 @@
     <div class="section-title">Projects</div>
     <hr/>
 
-    <div class="project-block">
+            <div class="project-block">
       <div class="job-header">
-        <span class="project-name">Job Tailor</span>
+        <span class="project-name">FileVault — Agent Storage &amp; Indexing Platform</span>
         <span class="job-date">2025 – Present</span>
       </div>
       <div class="project-links">
-        <a href="https://github.com/lohith261/CustomJobFinder">github.com/lohith261/CustomJobFinder</a>&nbsp;&nbsp;•&nbsp;&nbsp;
-        <a href="https://jobtailor.in/">jobtailor.in</a>
+        <a href="https://github.com/lohith261/filevault">github.com/lohith261/filevault</a>
       </div>
       <ul>
-        <li>Architected and shipped ATS data pipeline end-to-end as sole engineer — keyword extraction → gap scoring → LLM bullet rewrite → match ranking — Next.js 14, TypeScript, PostgreSQL/Supabase, Vercel.</li>
-        <li>Engineered real-time job scoring pipeline; AI ranks each opportunity by candidate fit with ranked breakdown, cutting hundreds of listings to a personalised shortlist instantly.</li>
-        <li>Achieved 85%+ ATS keyword coverage on tailored outputs across global job markets — packaged as a live production SaaS at jobtailor.in.</li>
+        <li>Designed and shipped FileVault, a multi-tenant file storage and vector indexing platform for AI agents; architected async document processing pipeline (extract → chunk → embed) with status tracking (pending → indexing → indexed) and PostgreSQL + pgvector backend.</li>
+        <li>Built Cloudflare R2 object storage layer with Prisma ORM; implemented OpenRouter text-embedding-3-small embeddings for semantic search across 50K+ chunks per agent with enforced per-agent usage limits (1 GB storage, 50 MB file cap, 10-file batch).</li>
+        <li>Engineered REST API (7 endpoint groups), TypeScript + Python SDKs, and MCP server for Claude Desktop/Cursor; implemented agent namespacing, SHA-256 API keys, and cross-agent file sharing; deployed on Vercel + Railway.</li>
       </ul>
     </div>
 

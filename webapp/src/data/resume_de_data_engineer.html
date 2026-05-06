@@ -243,7 +243,7 @@
     <hr/>
     <p>
       Data Platform Engineer with 2+ years at ADP — architected end-to-end risk detection pipeline processing 10K+ payroll audit cases/month across 1M+ employee records, achieving 80% classification precision and 40% reduction in manual audit effort via Python ETL, AWS data services (Glue, Lambda, RDS, DynamoDB), and automated data quality frameworks; open to EU Blue Card sponsorship.
-      Independently shipped two production data-driven products — <strong>Job Tailor</strong> (jobtailor.in) and <strong>Keen</strong> — end-to-end; expert in real-time pipelines, schema design, data contracts, and orchestration.
+      Independently shipped two production data-driven products — <strong>FileVault</strong> and <strong>Keen</strong> — end-to-end; expert in real-time pipelines, schema design, data contracts, and orchestration.
     </p>
   </div>
 
@@ -288,19 +288,18 @@
     <div class="section-title">Projects</div>
     <hr/>
 
-    <div class="project-block">
+            <div class="project-block">
       <div class="job-header">
-        <span class="project-name">Job Tailor — ATS Data Pipeline &amp; Matching Engine</span>
+        <span class="project-name">FileVault — Agent Storage &amp; Indexing Platform</span>
         <span class="job-date">2025 – Present</span>
       </div>
       <div class="project-links">
-        <a href="https://github.com/lohith261/CustomJobFinder">github.com/lohith261/CustomJobFinder</a>&nbsp;&nbsp;•&nbsp;&nbsp;
-        <a href="https://jobtailor.in/">jobtailor.in</a>
+        <a href="https://github.com/lohith261/filevault">github.com/lohith261/filevault</a>
       </div>
       <ul>
-        <li>Engineered real-time job aggregation pipeline scraping 5 platforms (Naukri, Indeed India, Internshala, Adzuna, RemoteOK); Groq AI scores each opportunity by keyword fit with ranked breakdown — reducing 100s of listings to a personalised shortlist instantly.</li>
-        <li>Built ATS keyword extraction pipeline (JD ingestion → LLM keyword extraction → token-level deduplication → coverage scoring) achieving 85%+ keyword match on tailored resume outputs; packaged as a live production SaaS on Next.js 14, PostgreSQL/Supabase, Vercel.</li>
-        <li>Architected end-to-end as sole engineer — owned data schema, pipeline orchestration, API layer, and frontend; serving Indian job seekers across 5 integrated platforms.</li>
+        <li>Designed and shipped FileVault, a multi-tenant file storage and vector indexing platform for AI agents; architected async document processing pipeline (extract → chunk → embed) with status tracking (pending → indexing → indexed) and PostgreSQL + pgvector backend.</li>
+        <li>Built Cloudflare R2 object storage layer with Prisma ORM; implemented OpenRouter text-embedding-3-small embeddings for semantic search across 50K+ chunks per agent with enforced per-agent usage limits (1 GB storage, 50 MB file cap, 10-file batch).</li>
+        <li>Engineered REST API (7 endpoint groups), TypeScript + Python SDKs, and MCP server for Claude Desktop/Cursor; implemented agent namespacing, SHA-256 API keys, and cross-agent file sharing; deployed on Vercel + Railway.</li>
       </ul>
     </div>
 

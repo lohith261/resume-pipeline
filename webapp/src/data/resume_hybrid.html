@@ -215,7 +215,7 @@
     <hr/>
     <p>
       AI Engineer with 2+ years at ADP — grew from Data Analyst (85%-accurate sentiment pipeline, 20% complaint reduction) to architecting LLM/RAG risk detection processing 10K+ audit cases/month across 1M+ payroll records with 40% effort reduction.
-      Independently shipped <strong>Job Tailor</strong> and <strong>Keen</strong> end-to-end; stack spans SQL/Python/Tableau, LangChain, RAG, AWS Bedrock/OpenAI/Groq, React/TypeScript, and Node.js/Python.
+      Independently shipped <strong>FileVault</strong> and <strong>Keen</strong> end-to-end; stack spans SQL/Python/Tableau, LangChain, RAG, AWS Bedrock/OpenAI/Groq, React/TypeScript, and Node.js/Python.
     </p>
   </div>
 
@@ -278,20 +278,18 @@
     <div class="section-title">Projects</div>
     <hr/>
 
-    <!-- Job Tailor -->
-    <div class="project-block">
+            <div class="project-block">
       <div class="job-header">
-        <span class="project-name">Job Tailor</span>
+        <span class="project-name">FileVault — Agent Storage Infrastructure</span>
         <span class="job-date">2025 – Present</span>
       </div>
       <div class="project-links">
-        <a href="https://github.com/lohith261/CustomJobFinder">github.com/lohith261/CustomJobFinder</a>&nbsp;&nbsp;•&nbsp;&nbsp;
-        <a href="https://jobtailor.in/">jobtailor.in</a>
+        <a href="https://github.com/lohith261/filevault">github.com/lohith261/filevault</a>
       </div>
       <ul>
-        <li>Architected and shipped AI job application SaaS end-to-end as sole engineer — Next.js 14, TypeScript, PostgreSQL/Supabase, Vercel — serving Indian job seekers across 5 integrated job platforms.</li>
-        <li>Engineered real-time job aggregation pipeline across Naukri, Indeed India, Internshala, Adzuna, and RemoteOK; Groq AI scores each opportunity by fit with ranked breakdown, cutting 100s of listings to a personalised shortlist instantly.</li>
-        <li>Shipped AI resume tailoring pipeline (PDF → ATS keyword gap analysis → LLM bullet rewrite → cover letter → cold outreach) achieving 85%+ keyword coverage on tailored outputs — packaged as a live production SaaS.</li>
+        <li>Architected and shipped FileVault, a multi-tenant REST API platform for AI agents — unified interface for file management, vector search, and persistent memory, replacing separate S3, Pinecone, Redis, and custom auth services; deployed on Next.js 16 / Vercel with Cloudflare R2 object storage.</li>
+        <li>Engineered async document indexing pipeline (extract → chunk → embed) using OpenRouter text-embedding-3-small and pgvector on PostgreSQL; supports 50K+ embedding chunks and TTL-based persistent memory per agent with state checkpoints.</li>
+        <li>Built MCP server enabling zero-code integration with Claude Desktop and Cursor; shipped TypeScript + Python SDKs with auto-pagination and agent-to-agent access control via SHA-256 API keys.</li>
       </ul>
     </div>
 

@@ -46,7 +46,7 @@
 \section{Summary}
 
 Full-Stack AI Engineer with 2+ years at ADP --- architected LLM/RAG risk detection and Python data pipelines processing 10K+ audit cases/month across 1M+ payroll records (40\% effort reduction), with 80\% classification precision and 25\% fewer false positives; open to Critical Skills Employment Permit (CSEP) sponsorship.
-      Independently shipped two production AI products --- Job Tailor (jobtailor.in) and Keen --- end-to-end. Stack: LangChain, RAG, AWS, Python, React/TypeScript.
+      Independently shipped two production AI products --- FileVault and Keen --- end-to-end. Stack: LangChain, RAG, AWS, Python, React/TypeScript.
 
 % ── SKILLS ──────────────────────────────────────────────────────────────────
 \section{Skills}
@@ -75,11 +75,11 @@ Full-Stack AI Engineer with 2+ years at ADP --- architected LLM/RAG risk detecti
 % ── PROJECTS ────────────────────────────────────────────────────────────────
 \section{Projects}
 
-\entry{Job Tailor}{\href{https://github.com/lohith261/CustomJobFinder}{github.com/lohith261/CustomJobFinder} \quad\textbullet\quad \href{https://jobtailor.in/}{jobtailor.in}}{2025 -- Present}
+\entry{FileVault --- Agent Storage Infrastructure}{\href{https://github.com/lohith261/filevault}{github.com/lohith261/filevault}}{2025 -- Present}
 \begin{itemize}
-  \item Architected and shipped AI job application SaaS end-to-end as sole engineer --- Next.js 14, TypeScript, PostgreSQL/Supabase, Vercel --- serving job seekers globally.
-  \item Engineered real-time job scoring pipeline; AI ranks each opportunity by fit with ranked breakdown, cutting hundreds of listings to a personalised shortlist instantly.
-  \item Shipped AI resume tailoring pipeline (ATS keyword gap analysis → LLM bullet rewrite → cover letter → cold outreach) achieving 85\%+ keyword coverage --- packaged as a live production SaaS.
+  \item Architected and shipped FileVault, a multi-tenant REST API platform for AI agents --- unified interface for file management, vector search, and persistent memory, replacing separate S3, Pinecone, Redis, and custom auth services; deployed on Next.js 16 / Vercel with Cloudflare R2 object storage.
+  \item Engineered async document indexing pipeline (extract → chunk → embed) using OpenRouter text-embedding-3-small and pgvector on PostgreSQL; supports 50K+ embedding chunks and TTL-based persistent memory per agent with state checkpoints.
+  \item Built MCP server enabling zero-code integration with Claude Desktop and Cursor; shipped TypeScript + Python SDKs with auto-pagination and agent-to-agent access control via SHA-256 API keys.
 \end{itemize}
 
 \entry{Keen --- AI Due Diligence Platform}{\href{https://github.com/lohith261/keen}{github.com/lohith261/keen} \quad\textbullet\quad \href{https://keen-sigma.vercel.app/}{keen-sigma.vercel.app}}{2024}
